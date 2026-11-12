@@ -187,46 +187,50 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (تحليل أدق: مزيج بين آخر 10 نتائج والكل)
+  // 👇 الرموز المتوقعة (تحليل أدق: بناءً على كل النتائج)
   const getExpectedSymbols = () => {
     if (sequence.length < 3) return [];
 
-    const recentSequence = sequence.slice(-10);
-
+    // 1. التكرار العام (من كل النتائج)
     const globalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
     const totalGlobal = sequence.length;
 
-    const recentTransitions: Record<string, number> = {};
+    // 2. التكرار الشرطي (من كل النتائج)
+    const totalConditionalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
-      recentTransitions[symbol.id] = 0;
+      totalConditionalCounts[symbol.id] = 0;
     }
-    for (let i = 0; i < recentSequence.length - 1; i++) {
-      const to = recentSequence[i + 1];
-      if (recentTransitions[to] !== undefined) {
-        recentTransitions[to]++;
+    for (let i = 0; i < sequence.length - 1; i++) {
+      const to = sequence[i + 1];
+      if (totalConditionalCounts[to] !== undefined) {
+        totalConditionalCounts[to]++;
       }
     }
 
+    // 3. دمج الاحتمالات (50% شرطي + 50% عام)
     const scoredSymbols = SYMBOLS.map((symbol) => {
       const globalProb = (globalCounts[symbol.id] || 0) / totalGlobal;
-      const recentProb = (recentTransitions[symbol.id] || 0) / (recentSequence.length - 1 || 1);
+      const conditionalProb = (totalConditionalCounts[symbol.id] || 0) / (sequence.length - 1 || 1);
       
-      const blendedScore = (recentProb * 0.6) + (globalProb * 0.4);
+      const blendedScore = (conditionalProb + globalProb) / 2;
 
       return { ...symbol, score: blendedScore };
     });
 
+    // 4. تقسيم لمجموعتين
     const veggies = ["tomato", "carrot", "pepper", "corn"];
     const animals = ["shrimp", "fish", "sheep", "rooster"];
 
+    // 5. أفضل 3 خضار
     const topVeggies = scoredSymbols
       .filter(s => veggies.includes(s.id))
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
 
+    // 6. أفضل 2 حيوانات
     const topAnimals = scoredSymbols
       .filter(s => animals.includes(s.id))
       .sort((a, b) => b.score - a.score)
