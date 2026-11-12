@@ -23,17 +23,12 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   
-  // إحصائيات الربح/الخسارة
   const [winCount, setWinCount] = useState(0);
   const [lossCount, setLossCount] = useState(0);
   
-  // 👇 الرموز الـ 5 اللي اختارها المستخدم كتوقع
   const [userPicks, setUserPicks] = useState<string[]>([]);
-  
-  // 👇 حالة آخر نتيجة (عشان نعرضها)
   const [lastResult, setLastResult] = useState<{ symbolId: string; isWin: boolean } | null>(null);
 
-  // 👇 تحميل البيانات من localStorage
   useEffect(() => {
     const savedSeq = localStorage.getItem(STORAGE_KEY);
     if (savedSeq) {
@@ -57,7 +52,6 @@ export default function Home() {
     setIsLoaded(true);
   }, []);
 
-  // 👇 حفظ البيانات في localStorage لما تتغير
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sequence));
@@ -66,24 +60,19 @@ export default function Home() {
     }
   }, [sequence, winCount, lossCount, userPicks, isLoaded]);
 
-  // 👇 إضافة نتيجة جديدة (من أزرار التسجيل)
   const addResult = (id: string) => {
-    // إذا كان في توقعات مختارة، نقارن
-    if (userPicks.length === 5) { // 👈 5 بدل 3
+    if (userPicks.length === 5) {
       const isWin = userPicks.includes(id);
       setLastResult({ symbolId: id, isWin });
 
       if (isWin) setWinCount((prev) => prev + 1);
       else setLossCount((prev) => prev + 1);
 
-      // بعد ما نسجل، بنفضي التوقعات عشان يختار توقعات جديدة
       setUserPicks([]);
     } else {
-      // إذا ما في توقعات، بس نسجل الرمز
       setLastResult({ symbolId: id, isWin: false });
     }
 
-    // نضيف الرمز للمصفوفة (التاريخ)
     setSequence([...sequence, id]);
   };
 
@@ -149,10 +138,10 @@ export default function Home() {
     if (userPicks.includes(symbolId)) {
       setUserPicks(userPicks.filter((id) => id !== symbolId));
     } else {
-      if (userPicks.length < 5) { // 👈 5 بدل 3
+      if (userPicks.length < 5) {
         setUserPicks([...userPicks, symbolId]);
       } else {
-        alert("ما فيك تختار أكتر من 5 رموز!"); // 👈 5 بدل 3
+        alert("ما فيك تختار أكتر من 5 رموز!");
       }
     }
   };
@@ -198,19 +187,31 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (5 بدل 3)
+  // 👇 الرموز المتوقعة (3 خضار + 2 حيوانات)
   const getExpectedSymbols = () => {
     if (sequence.length < 2) return [];
-    const totalCounts: Record<string, number> = {};
-    for (const symbol of SYMBOLS) totalCounts[symbol.id] = 0;
-    for (let i = 0; i < sequence.length - 1; i++) {
-      const to = sequence[i + 1];
-      if (totalCounts[to] !== undefined) totalCounts[to]++;
+
+    const globalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
-    return SYMBOLS.map((symbol) => ({ ...symbol, count: totalCounts[symbol.id] || 0 }))
-      .filter((s) => s.count > 0)
+
+    const veggies = ["tomato", "carrot", "pepper", "corn"];
+    const animals = ["shrimp", "fish", "sheep", "rooster"];
+
+    // 3 من الخضار
+    const topVeggies = SYMBOLS.filter(s => veggies.includes(s.id))
+      .map(s => ({ ...s, count: globalCounts[s.id] || 0 }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5); // 👈 5 بدل 3
+      .slice(0, 3);
+
+    // 2 من الحيوانات
+    const topAnimals = SYMBOLS.filter(s => animals.includes(s.id))
+      .map(s => ({ ...s, count: globalCounts[s.id] || 0 }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2);
+
+    return [...topVeggies, ...topAnimals];
   };
 
   const renderWheel = () => {
@@ -254,7 +255,6 @@ export default function Home() {
     <main dir="rtl" className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans selection:bg-amber-500/30">
       <div className="max-w-7xl mx-auto">
         
-        {/* الهيدر */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold font-heading text-white flex items-center gap-2">
@@ -281,7 +281,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* 👇 نتيجة التسجيل الأخيرة */}
         {lastResult && (
           <div className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${lastResult.isWin ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"}`}>
             <div className="flex items-center gap-3">
@@ -294,7 +293,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* الإحصائيات السريعة */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <div className="text-slate-400 text-sm mb-1">إجمالي النتائج</div>
@@ -308,7 +306,7 @@ export default function Home() {
             </div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة (5)</div>
+            <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة (3 خضار + 2 حيوانات)</div>
             <div className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">
               {getExpectedSymbols().length > 0 ? (
                 getExpectedSymbols().map((symbol, index) => (
@@ -333,13 +331,11 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* العمود الأيمن */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center">
               {renderWheel()}
             </div>
 
-            {/* 👇 اختيار 5 رموز */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">اختر 5 رموز (توقعك):</h2>
               <div className="grid grid-cols-4 gap-2 mb-4">
@@ -362,7 +358,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 👇 سجل النتيجة (أزرار التسجيل) */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">سجل النتيجة اللي طلعت:</h2>
               <div className="grid grid-cols-4 gap-2">
@@ -379,7 +374,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* آخر النتائج */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <h2 className="text-sm font-bold text-slate-300 mb-4">آخر النتائج</h2>
               <div className="flex flex-wrap gap-2">
@@ -392,7 +386,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* العمود الأيسر */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-slate-800 bg-slate-900/50">
