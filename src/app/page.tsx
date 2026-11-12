@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, RotateCcw, Download, Trash2, ChevronLeft, Upload } from "lucide-react";
+import { BarChart3, RotateCcw, Download, Trash2, ChevronLeft, Upload, CheckCircle, XCircle } from "lucide-react";
 
 const SYMBOLS = [
   { id: "tomato", emoji: "🍅", name: "بندورة", color: "#e74c3c" },
@@ -15,33 +15,88 @@ const SYMBOLS = [
 ];
 
 const STORAGE_KEY = "wheel_sequence_v1";
+const STATS_KEY = "wheel_stats_v1";
+const PICKS_KEY = "wheel_picks_v1";
 
 export default function Home() {
   const [sequence, setSequence] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  
+  // إحصائيات الربح/الخسارة
+  const [winCount, setWinCount] = useState(0);
+  const [lossCount, setLossCount] = useState(0);
+  
+  // 👇 الرموز الـ 3 اللي اختارها المستخدم كتوقع
+  const [userPicks, setUserPicks] = useState<string[]>([]);
+  
+  // 👇 حالة آخر نتيجة (عشان نعرضها)
+  const [lastResult, setLastResult] = useState<{ symbolId: string; isWin: boolean } | null>(null);
 
+  // 👇 تحميل البيانات من localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setSequence(JSON.parse(saved));
-      } catch {
-        setSequence([]);
-      }
+    const savedSeq = localStorage.getItem(STORAGE_KEY);
+    if (savedSeq) {
+      try { setSequence(JSON.parse(savedSeq)); } catch { setSequence([]); }
     }
+
+    const savedStats = localStorage.getItem(STATS_KEY);
+    if (savedStats) {
+      try {
+        const stats = JSON.parse(savedStats);
+        setWinCount(stats.winCount || 0);
+        setLossCount(stats.lossCount || 0);
+      } catch {}
+    }
+
+    const savedPicks = localStorage.getItem(PICKS_KEY);
+    if (savedPicks) {
+      try { setUserPicks(JSON.parse(savedPicks)); } catch {}
+    }
+
     setIsLoaded(true);
   }, []);
 
+  // 👇 حفظ البيانات في localStorage لما تتغير
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sequence));
+      localStorage.setItem(STATS_KEY, JSON.stringify({ winCount, lossCount }));
+      localStorage.setItem(PICKS_KEY, JSON.stringify(userPicks));
     }
-  }, [sequence, isLoaded]);
+  }, [sequence, winCount, lossCount, userPicks, isLoaded]);
 
-  const addResult = (id: string) => setSequence([...sequence, id]);
+  // 👇 إضافة نتيجة جديدة (من أزرار التسجيل)
+  const addResult = (id: string) => {
+    // إذا كان في توقعات مختارة، نقارن
+    if (userPicks.length === 3) {
+      const isWin = userPicks.includes(id);
+      setLastResult({ symbolId: id, isWin });
+
+      if (isWin) setWinCount((prev) => prev + 1);
+      else setLossCount((prev) => prev + 1);
+
+      // بعد ما نسجل، بنفضي التوقعات عشان يختار توقعات جديدة
+      setUserPicks([]);
+    } else {
+      // إذا ما في توقعات، بس نسجل الرمز
+      setLastResult({ symbolId: id, isWin: false });
+    }
+
+    // نضيف الرمز للمصفوفة (التاريخ)
+    setSequence([...sequence, id]);
+  };
+
   const undo = () => sequence.length > 0 && setSequence(sequence.slice(0, -1));
-  const clearAll = () => confirm("هل أنت متأكد من مسح كل النتائج؟") && setSequence([]);
+  const clearAll = () => {
+    if (confirm("هل أنت متأكد من مسح كل النتائج والإحصائيات؟")) {
+      setSequence([]);
+      setWinCount(0);
+      setLossCount(0);
+      setUserPicks([]);
+      setLastResult(null);
+    }
+  };
 
   const exportCSV = () => {
     if (sequence.length === 0) return alert("لا توجد نتائج للتصدير");
@@ -60,7 +115,6 @@ export default function Home() {
     link.click();
   };
 
-  // 👇 دالة استيراد CSV
   const importCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,6 +145,18 @@ export default function Home() {
     reader.readAsText(file);
   };
 
+  const togglePick = (symbolId: string) => {
+    if (userPicks.includes(symbolId)) {
+      setUserPicks(userPicks.filter((id) => id !== symbolId));
+    } else {
+      if (userPicks.length < 3) {
+        setUserPicks([...userPicks, symbolId]);
+      } else {
+        alert("ما فيك تختار أكتر من 3 رموز!");
+      }
+    }
+  };
+
   const counts = SYMBOLS.map((symbol) => ({
     ...symbol,
     count: sequence.filter((id) => id === symbol.id).length,
@@ -108,64 +174,42 @@ export default function Home() {
     if (transitions[from] && transitions[from][to] !== undefined) transitions[from][to]++;
   }
 
-  // 👇 دالة محسّنة للاحتمالات (مزج بين الشرطي والعام)
   const getConditionalProbabilities = (sourceId: string) => {
     const sourceTransitions = transitions[sourceId] || {};
     const totalSourceTransitions = Object.values(sourceTransitions).reduce((a, b) => a + b, 0);
-    
     if (totalSourceTransitions === 0) return [];
 
-    // حساب التكرار العام لكل رمز
     const globalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
     const totalGlobal = sequence.length;
 
-    // مزج الاحتمالات
     return SYMBOLS.map((target) => {
       const conditionalCount = sourceTransitions[target.id] || 0;
       const conditionalProb = (conditionalCount / totalSourceTransitions) * 100;
-      
       const globalCount = globalCounts[target.id] || 0;
       const globalProb = (globalCount / totalGlobal) * 100;
-
       const blendedProb = (conditionalProb + globalProb) / 2;
-
-      return {
-        ...target,
-        count: conditionalCount,
-        probability: blendedProb,
-      };
+      return { ...target, count: conditionalCount, probability: blendedProb };
     }).sort((a, b) => b.probability - a.probability);
   };
 
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 دالة لجلب 3 رموز متوقعة بناءً على كل النتائج
   const getExpectedSymbols = () => {
     if (sequence.length < 2) return [];
-
     const totalCounts: Record<string, number> = {};
-    for (const symbol of SYMBOLS) {
-      totalCounts[symbol.id] = 0;
-    }
-
+    for (const symbol of SYMBOLS) totalCounts[symbol.id] = 0;
     for (let i = 0; i < sequence.length - 1; i++) {
       const to = sequence[i + 1];
-      if (totalCounts[to] !== undefined) {
-        totalCounts[to]++;
-      }
+      if (totalCounts[to] !== undefined) totalCounts[to]++;
     }
-
-    return SYMBOLS.map((symbol) => ({
-      ...symbol,
-      count: totalCounts[symbol.id] || 0,
-    }))
-    .filter((s) => s.count > 0)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+    return SYMBOLS.map((symbol) => ({ ...symbol, count: totalCounts[symbol.id] || 0 }))
+      .filter((s) => s.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
   };
 
   const renderWheel = () => {
@@ -219,8 +263,7 @@ export default function Home() {
             <p className="text-slate-400 mt-1 text-sm">أداة تحليل نتائج عجلة الحظ</p>
           </div>
           
-          <div className="flex gap-2">
-            {/* 👇 زر استيراد CSV */}
+          <div className="flex flex-wrap gap-2">
             <label className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-slate-700 cursor-pointer">
               <Upload size={16} /> استيراد CSV
               <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
@@ -237,6 +280,19 @@ export default function Home() {
           </div>
         </header>
 
+        {/* 👇 نتيجة التسجيل الأخيرة */}
+        {lastResult && (
+          <div className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${lastResult.isWin ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"}`}>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{SYMBOLS.find(s => s.id === lastResult.symbolId)?.emoji}</span>
+              <span className="font-bold text-lg">{SYMBOLS.find(s => s.id === lastResult.symbolId)?.name}</span>
+            </div>
+            <div className={`font-bold text-lg flex items-center gap-2 ${lastResult.isWin ? "text-green-400" : "text-red-400"}`}>
+              {lastResult.isWin ? <><CheckCircle size={20} /> ربح</> : <><XCircle size={20} /> خسارة</>}
+            </div>
+          </div>
+        )}
+
         {/* الإحصائيات السريعة */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
@@ -250,13 +306,6 @@ export default function Home() {
               {counts.sort((a, b) => b.count - a.count)[0]?.name}
             </div>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <div className="text-slate-400 text-sm mb-1">آخر نتيجة</div>
-            <div className="text-2xl font-bold text-white">
-              {sequence.length > 0 ? SYMBOLS.find(s => s.id === sequence[sequence.length - 1])?.emoji : "-"}
-            </div>
-          </div>
-          {/* 👇 خانة الرموز المتوقعة */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة</div>
             <div className="text-xl font-bold text-white flex items-center gap-2">
@@ -272,20 +321,49 @@ export default function Home() {
               )}
             </div>
           </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-1">النتائج</div>
+            <div className="flex items-center gap-3">
+              <div className="text-green-400 font-bold text-xl">{winCount} ✅</div>
+              <div className="text-red-400 font-bold text-xl">{lossCount} ❌</div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* العمود الأيمن: العجلة والأزرار */}
+          {/* العمود الأيمن */}
           <div className="lg:col-span-1 space-y-6">
-            {/* العجلة */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center">
               {renderWheel()}
             </div>
 
-            {/* أزرار الإدخال */}
+            {/* 👇 اختيار 3 رموز */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">سجل النتيجة</h2>
+              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">اختر 3 رموز (توقعك):</h2>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {SYMBOLS.map((symbol) => (
+                  <button
+                    key={symbol.id}
+                    onClick={() => togglePick(symbol.id)}
+                    className={`rounded-lg p-3 text-2xl flex items-center justify-center transition-all border ${
+                      userPicks.includes(symbol.id)
+                        ? "bg-amber-500/20 border-amber-500 scale-105"
+                        : "bg-slate-800 border-slate-700 hover:border-slate-500"
+                    }`}
+                  >
+                    {symbol.emoji}
+                  </button>
+                ))}
+              </div>
+              <div className="text-sm text-slate-400 text-center">
+                اخترت: {userPicks.length} / 3
+              </div>
+            </div>
+
+            {/* 👇 سجل النتيجة (أزرار التسجيل) */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">سجل النتيجة اللي طلعت:</h2>
               <div className="grid grid-cols-4 gap-2">
                 {SYMBOLS.map((symbol) => (
                   <button
@@ -313,10 +391,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* العمود الأيسر: الجداول */}
+          {/* العمود الأيسر */}
           <div className="lg:col-span-2 space-y-8">
-            
-            {/* تكرار كل رمز */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-slate-800 bg-slate-900/50">
                 <h2 className="font-bold text-white">تكرار كل رمز</h2>
@@ -329,10 +405,7 @@ export default function Home() {
                       <span className="text-sm font-medium text-slate-300">{symbol.name}</span>
                     </div>
                     <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500 rounded-full transition-all duration-500"
-                        style={{ width: `${(symbol.count / maxCount) * 100}%` }}
-                      />
+                      <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${(symbol.count / maxCount) * 100}%` }} />
                     </div>
                     <div className="w-16 text-left text-sm font-mono text-slate-400">
                       {symbol.count} <span className="text-xs">({sequence.length > 0 ? ((symbol.count / sequence.length) * 100).toFixed(0) : 0}%)</span>
@@ -342,7 +415,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* شو بيجي بعد...؟ */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
                 <h2 className="font-bold text-white">تحليل الانتقالات (شو بيجي بعد...؟)</h2>
@@ -359,9 +431,7 @@ export default function Home() {
                       key={symbol.id}
                       onClick={() => setSelectedSource(symbol.id)}
                       className={`px-3 py-2 rounded-lg text-lg transition-all border ${
-                        selectedSource === symbol.id
-                          ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                          : "bg-slate-800 border-slate-700 hover:border-slate-500"
+                        selectedSource === symbol.id ? "bg-amber-500/20 border-amber-500 text-amber-400" : "bg-slate-800 border-slate-700 hover:border-slate-500"
                       }`}
                     >
                       {symbol.emoji}
@@ -375,9 +445,7 @@ export default function Home() {
                       بعد {SYMBOLS.find((s) => s.id === selectedSource)?.name} ({selectedSourceTotal} انتقال):
                     </p>
                     {selectedSourceTotal === 0 ? (
-                      <p className="text-slate-500 text-sm text-center py-4 bg-slate-800/50 rounded-lg">
-                        لا توجد بيانات كافية لهذا الرمز
-                      </p>
+                      <p className="text-slate-500 text-sm text-center py-4 bg-slate-800/50 rounded-lg">لا توجد بيانات كافية لهذا الرمز</p>
                     ) : (
                       <div className="space-y-3">
                         {conditionalData.map((target) => (
@@ -387,10 +455,7 @@ export default function Home() {
                               <span className="text-sm text-slate-300">{target.name}</span>
                             </div>
                             <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-sky-500 rounded-full transition-all duration-500"
-                                style={{ width: `${target.probability}%` }}
-                              />
+                              <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${target.probability}%` }} />
                             </div>
                             <div className="w-16 text-left text-sm font-mono text-slate-400">
                               {target.count} <span className="text-xs">({target.probability.toFixed(0)}%)</span>
@@ -401,9 +466,7 @@ export default function Home() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-slate-500 text-sm text-center py-8">
-                    اختر رمزاً من الأعلى لتحليل ما يأتي بعده
-                  </p>
+                  <p className="text-slate-500 text-sm text-center py-8">اختر رمزاً من الأعلى لتحليل ما يأتي بعده</p>
                 )}
               </div>
             </div>
