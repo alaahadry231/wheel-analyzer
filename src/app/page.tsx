@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BarChart3, RotateCcw, Download, Trash2, ChevronLeft } from "lucide-react";
+import { BarChart3, RotateCcw, Download, Trash2, ChevronLeft, Upload } from "lucide-react";
 
 const SYMBOLS = [
   { id: "tomato", emoji: "🍅", name: "بندورة", color: "#e74c3c" },
@@ -58,6 +58,37 @@ export default function Home() {
     link.setAttribute("href", url);
     link.setAttribute("download", `wheel_data_${date}.csv`);
     link.click();
+  };
+
+  // 👇 دالة استيراد CSV
+  const importCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split("\n").slice(1);
+      const importedIds: string[] = [];
+
+      for (const line of lines) {
+        const parts = line.split(",");
+        if (parts.length >= 2) {
+          const id = parts[1].trim();
+          if (SYMBOLS.find((s) => s.id === id)) {
+            importedIds.push(id);
+          }
+        }
+      }
+
+      if (importedIds.length > 0) {
+        setSequence(importedIds);
+        alert(`تم استيراد ${importedIds.length} نتيجة بنجاح!`);
+      } else {
+        alert("لم يتم العثور على نتائج صالحة في الملف.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const counts = SYMBOLS.map((symbol) => ({
@@ -189,6 +220,11 @@ export default function Home() {
           </div>
           
           <div className="flex gap-2">
+            {/* 👇 زر استيراد CSV */}
+            <label className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-slate-700 cursor-pointer">
+              <Upload size={16} /> استيراد CSV
+              <input type="file" accept=".csv" onChange={importCSV} className="hidden" />
+            </label>
             <button onClick={exportCSV} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-slate-700">
               <Download size={16} /> تصدير CSV
             </button>
