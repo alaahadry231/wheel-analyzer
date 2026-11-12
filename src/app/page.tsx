@@ -187,28 +187,49 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (3 خضار + 2 حيوانات)
+  // 👇 الرموز المتوقعة (تحليل أدق: مزيج بين آخر 10 نتائج والكل)
   const getExpectedSymbols = () => {
-    if (sequence.length < 2) return [];
+    if (sequence.length < 3) return [];
+
+    const recentSequence = sequence.slice(-10);
 
     const globalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
+    const totalGlobal = sequence.length;
+
+    const recentTransitions: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      recentTransitions[symbol.id] = 0;
+    }
+    for (let i = 0; i < recentSequence.length - 1; i++) {
+      const to = recentSequence[i + 1];
+      if (recentTransitions[to] !== undefined) {
+        recentTransitions[to]++;
+      }
+    }
+
+    const scoredSymbols = SYMBOLS.map((symbol) => {
+      const globalProb = (globalCounts[symbol.id] || 0) / totalGlobal;
+      const recentProb = (recentTransitions[symbol.id] || 0) / (recentSequence.length - 1 || 1);
+      
+      const blendedScore = (recentProb * 0.6) + (globalProb * 0.4);
+
+      return { ...symbol, score: blendedScore };
+    });
 
     const veggies = ["tomato", "carrot", "pepper", "corn"];
     const animals = ["shrimp", "fish", "sheep", "rooster"];
 
-    // 3 من الخضار
-    const topVeggies = SYMBOLS.filter(s => veggies.includes(s.id))
-      .map(s => ({ ...s, count: globalCounts[s.id] || 0 }))
-      .sort((a, b) => b.count - a.count)
+    const topVeggies = scoredSymbols
+      .filter(s => veggies.includes(s.id))
+      .sort((a, b) => b.score - a.score)
       .slice(0, 3);
 
-    // 2 من الحيوانات
-    const topAnimals = SYMBOLS.filter(s => animals.includes(s.id))
-      .map(s => ({ ...s, count: globalCounts[s.id] || 0 }))
-      .sort((a, b) => b.count - a.count)
+    const topAnimals = scoredSymbols
+      .filter(s => animals.includes(s.id))
+      .sort((a, b) => b.score - a.score)
       .slice(0, 2);
 
     return [...topVeggies, ...topAnimals];
