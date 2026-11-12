@@ -27,7 +27,7 @@ export default function Home() {
   const [winCount, setWinCount] = useState(0);
   const [lossCount, setLossCount] = useState(0);
   
-  // 👇 الرموز الـ 3 اللي اختارها المستخدم كتوقع
+  // 👇 الرموز الـ 5 اللي اختارها المستخدم كتوقع
   const [userPicks, setUserPicks] = useState<string[]>([]);
   
   // 👇 حالة آخر نتيجة (عشان نعرضها)
@@ -69,7 +69,7 @@ export default function Home() {
   // 👇 إضافة نتيجة جديدة (من أزرار التسجيل)
   const addResult = (id: string) => {
     // إذا كان في توقعات مختارة، نقارن
-    if (userPicks.length === 3) {
+    if (userPicks.length === 5) { // 👈 5 بدل 3
       const isWin = userPicks.includes(id);
       setLastResult({ symbolId: id, isWin });
 
@@ -149,10 +149,10 @@ export default function Home() {
     if (userPicks.includes(symbolId)) {
       setUserPicks(userPicks.filter((id) => id !== symbolId));
     } else {
-      if (userPicks.length < 3) {
+      if (userPicks.length < 5) { // 👈 5 بدل 3
         setUserPicks([...userPicks, symbolId]);
       } else {
-        alert("ما فيك تختار أكتر من 3 رموز!");
+        alert("ما فيك تختار أكتر من 5 رموز!"); // 👈 5 بدل 3
       }
     }
   };
@@ -198,6 +198,7 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
+  // 👇 الرموز المتوقعة (5 بدل 3)
   const getExpectedSymbols = () => {
     if (sequence.length < 2) return [];
     const totalCounts: Record<string, number> = {};
@@ -209,7 +210,7 @@ export default function Home() {
     return SYMBOLS.map((symbol) => ({ ...symbol, count: totalCounts[symbol.id] || 0 }))
       .filter((s) => s.count > 0)
       .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+      .slice(0, 5); // 👈 5 بدل 3
   };
 
   const renderWheel = () => {
@@ -307,8 +308,8 @@ export default function Home() {
             </div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة</div>
-            <div className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة (5)</div>
+            <div className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">
               {getExpectedSymbols().length > 0 ? (
                 getExpectedSymbols().map((symbol, index) => (
                   <span key={symbol.id} className="flex items-center gap-1">
@@ -338,9 +339,9 @@ export default function Home() {
               {renderWheel()}
             </div>
 
-            {/* 👇 اختيار 3 رموز */}
+            {/* 👇 اختيار 5 رموز */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">اختر 3 رموز (توقعك):</h2>
+              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">اختر 5 رموز (توقعك):</h2>
               <div className="grid grid-cols-4 gap-2 mb-4">
                 {SYMBOLS.map((symbol) => (
                   <button
@@ -357,7 +358,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="text-sm text-slate-400 text-center">
-                اخترت: {userPicks.length} / 3
+                اخترت: {userPicks.length} / 5
               </div>
             </div>
 
