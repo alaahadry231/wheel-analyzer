@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { BarChart3, RotateCcw, Download, Trash2, ChevronLeft } from "lucide-react";
 
-// 👇 الرموز الثمانية (زي ما طلبت بالبرومت)
 const SYMBOLS = [
   { id: "tomato", emoji: "🍅", name: "بندورة", color: "#e74c3c" },
   { id: "pepper", emoji: "🌶️", name: "فلفل", color: "#c0392b" },
@@ -21,7 +21,6 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
-  // 👇 تحميل البيانات من localStorage
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -34,47 +33,23 @@ export default function Home() {
     setIsLoaded(true);
   }, []);
 
-  // 👇 حفظ البيانات في localStorage
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sequence));
     }
   }, [sequence, isLoaded]);
 
-  // 👇 إضافة نتيجة جديدة
-  const addResult = (id: string) => {
-    setSequence([...sequence, id]);
-  };
+  const addResult = (id: string) => setSequence([...sequence, id]);
+  const undo = () => sequence.length > 0 && setSequence(sequence.slice(0, -1));
+  const clearAll = () => confirm("هل أنت متأكد من مسح كل النتائج؟") && setSequence([]);
 
-  // 👇 تراجع (حذف آخر نتيجة)
-  const undo = () => {
-    if (sequence.length > 0) {
-      setSequence(sequence.slice(0, -1));
-    }
-  };
-
-  // 👇 مسح الكل
-  const clearAll = () => {
-    if (confirm("هل أنت متأكد من مسح كل النتائج؟")) {
-      setSequence([]);
-    }
-  };
-
-  // 👇 تصدير CSV
   const exportCSV = () => {
-    if (sequence.length === 0) {
-      alert("لا توجد نتائج للتصدير");
-      return;
-    }
-
+    if (sequence.length === 0) return alert("لا توجد نتائج للتصدير");
     const header = "index,symbol_id,symbol_name\n";
-    const rows = sequence
-      .map((id, index) => {
-        const symbol = SYMBOLS.find((s) => s.id === id);
-        return `${index + 1},${id},${symbol?.name || ""}`;
-      })
-      .join("\n");
-
+    const rows = sequence.map((id, index) => {
+      const symbol = SYMBOLS.find((s) => s.id === id);
+      return `${index + 1},${id},${symbol?.name || ""}`;
+    }).join("\n");
     const csv = "\ufeff" + header + rows;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -85,99 +60,114 @@ export default function Home() {
     link.click();
   };
 
-  // 👇 حساب التكرار
   const counts = SYMBOLS.map((symbol) => ({
     ...symbol,
     count: sequence.filter((id) => id === symbol.id).length,
   }));
-
   const maxCount = Math.max(...counts.map((c) => c.count), 1);
 
-  // 👇 حساب الانتقالات (شو بيجي بعد شو)
   const transitions: Record<string, Record<string, number>> = {};
   for (const symbol of SYMBOLS) {
     transitions[symbol.id] = {};
-    for (const s of SYMBOLS) {
-      transitions[symbol.id][s.id] = 0;
-    }
+    for (const s of SYMBOLS) transitions[symbol.id][s.id] = 0;
   }
-
   for (let i = 0; i < sequence.length - 1; i++) {
     const from = sequence[i];
     const to = sequence[i + 1];
-    if (transitions[from] && transitions[from][to] !== undefined) {
-      transitions[from][to]++;
-    }
+    if (transitions[from] && transitions[from][to] !== undefined) transitions[from][to]++;
   }
 
-  // 👇 حساب الاحتمالات الشرطية للرمز المختار
+  // 👇 دالة محسّنة للاحتمالات (مزج بين الشرطي والعام)
   const getConditionalProbabilities = (sourceId: string) => {
     const sourceTransitions = transitions[sourceId] || {};
-    const total = Object.values(sourceTransitions).reduce((a, b) => a + b, 0);
-    if (total === 0) return [];
+    const totalSourceTransitions = Object.values(sourceTransitions).reduce((a, b) => a + b, 0);
+    
+    if (totalSourceTransitions === 0) return [];
 
-    return SYMBOLS.map((target) => ({
-      ...target,
-      count: sourceTransitions[target.id] || 0,
-      probability: total > 0 ? (sourceTransitions[target.id] / total) * 100 : 0,
-    })).sort((a, b) => b.count - a.count);
+    // حساب التكرار العام لكل رمز
+    const globalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
+    }
+    const totalGlobal = sequence.length;
+
+    // مزج الاحتمالات
+    return SYMBOLS.map((target) => {
+      const conditionalCount = sourceTransitions[target.id] || 0;
+      const conditionalProb = (conditionalCount / totalSourceTransitions) * 100;
+      
+      const globalCount = globalCounts[target.id] || 0;
+      const globalProb = (globalCount / totalGlobal) * 100;
+
+      const blendedProb = (conditionalProb + globalProb) / 2;
+
+      return {
+        ...target,
+        count: conditionalCount,
+        probability: blendedProb,
+      };
+    }).sort((a, b) => b.probability - a.probability);
   };
 
-  const conditionalData = selectedSource
-    ? getConditionalProbabilities(selectedSource)
-    : [];
+  const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
+  const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  const selectedSourceTotal = selectedSource
-    ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0)
-    : 0;
+  // 👇 دالة لجلب 3 رموز متوقعة بناءً على كل النتائج
+  const getExpectedSymbols = () => {
+    if (sequence.length < 2) return [];
 
-  // 👇 رسم العجلة SVG
+    const totalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      totalCounts[symbol.id] = 0;
+    }
+
+    for (let i = 0; i < sequence.length - 1; i++) {
+      const to = sequence[i + 1];
+      if (totalCounts[to] !== undefined) {
+        totalCounts[to]++;
+      }
+    }
+
+    return SYMBOLS.map((symbol) => ({
+      ...symbol,
+      count: totalCounts[symbol.id] || 0,
+    }))
+    .filter((s) => s.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+  };
+
   const renderWheel = () => {
-    const size = 320;
+    const size = 200;
     const center = size / 2;
     const radius = center - 10;
     const angleStep = (Math.PI * 2) / SYMBOLS.length;
 
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl">
         {SYMBOLS.map((symbol, index) => {
           const startAngle = index * angleStep - Math.PI / 2;
           const endAngle = (index + 1) * angleStep - Math.PI / 2;
-
           const x1 = center + radius * Math.cos(startAngle);
           const y1 = center + radius * Math.sin(startAngle);
           const x2 = center + radius * Math.cos(endAngle);
           const y2 = center + radius * Math.sin(endAngle);
-
           const largeArc = angleStep > Math.PI ? 1 : 0;
-
-          const pathData = [
-            `M ${center} ${center}`,
-            `L ${x1} ${y1}`,
-            `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
-            "Z",
-          ].join(" ");
-
+          const pathData = [`M ${center} ${center}`, `L ${x1} ${y1}`, `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`, "Z"].join(" ");
           const midAngle = (startAngle + endAngle) / 2;
           const textX = center + radius * 0.65 * Math.cos(midAngle);
           const textY = center + radius * 0.65 * Math.sin(midAngle);
 
           return (
             <g key={symbol.id}>
-              <path d={pathData} fill={symbol.color} stroke="#1a1a2e" strokeWidth="2" />
-              <text
-                x={textX}
-                y={textY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize="24"
-              >
+              <path d={pathData} fill={symbol.color} stroke="#1e293b" strokeWidth="1" />
+              <text x={textX} y={textY} textAnchor="middle" dominantBaseline="middle" fontSize="16">
                 {symbol.emoji}
               </text>
             </g>
           );
         })}
-        <circle cx={center} cy={center} r="25" fill="#000" stroke="#f0c040" strokeWidth="4" />
+        <circle cx={center} cy={center} r="20" fill="#0f172a" stroke="#334155" strokeWidth="2" />
       </svg>
     );
   };
@@ -185,155 +175,203 @@ export default function Home() {
   if (!isLoaded) return null;
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#1a1a2e] text-[#eee] p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#f0c040] text-center mb-8">🎡 محلل العجلة</h1>
-
-        {/* القسم العلوي (العجلة + الأزرار) */}
-        <div className="flex flex-wrap gap-6 mb-6">
-          {/* العجلة */}
-          <div className="flex-1 min-w-[320px] flex items-center justify-center bg-[#16213e] rounded-xl p-5">
-            {renderWheel()}
+    <main dir="rtl" className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans selection:bg-amber-500/30">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* الهيدر */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold font-heading text-white flex items-center gap-2">
+              <BarChart3 className="text-amber-500" />
+              محلل العجلة
+            </h1>
+            <p className="text-slate-400 mt-1 text-sm">أداة تحليل نتائج عجلة الحظ</p>
           </div>
+          
+          <div className="flex gap-2">
+            <button onClick={exportCSV} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-slate-700">
+              <Download size={16} /> تصدير CSV
+            </button>
+            <button onClick={undo} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-slate-700">
+              <RotateCcw size={16} /> تراجع
+            </button>
+            <button onClick={clearAll} className="flex items-center gap-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 px-4 py-2 rounded-lg text-sm font-bold transition border border-red-900/50">
+              <Trash2 size={16} /> مسح الكل
+            </button>
+          </div>
+        </header>
 
-          {/* أزرار الإدخال */}
-          <div className="flex-1 min-w-[320px] bg-[#16213e] rounded-xl p-5">
-            <h2 className="text-lg font-bold text-[#f0c040] mb-4">
-              اضغط على الرمز اللي طلع في التطبيق:
-            </h2>
-            <div className="grid grid-cols-4 gap-3 mb-4">
-              {SYMBOLS.map((symbol) => (
-                <button
-                  key={symbol.id}
-                  onClick={() => addResult(symbol.id)}
-                  className="bg-[#0f3460] border-2 border-[#1a4d8f] rounded-lg p-4 text-3xl hover:scale-105 hover:bg-[#1a4d8f] transition-transform"
-                  title={symbol.name}
-                >
-                  {symbol.emoji}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={undo}
-                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition"
-              >
-                ↩ تراجع
-              </button>
-              <button
-                onClick={exportCSV}
-                className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-lg transition"
-              >
-                ⬇ CSV
-              </button>
-              <button
-                onClick={clearAll}
-                className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition"
-              >
-                🗑 مسح
-              </button>
+        {/* الإحصائيات السريعة */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-1">إجمالي النتائج</div>
+            <div className="text-2xl font-bold text-white">{sequence.length}</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-1">الرمز الأكثر تكراراً</div>
+            <div className="text-2xl font-bold text-white flex items-center gap-2">
+              {counts.sort((a, b) => b.count - a.count)[0]?.emoji} 
+              {counts.sort((a, b) => b.count - a.count)[0]?.name}
             </div>
           </div>
-        </div>
-
-        {/* آخر النتائج */}
-        <div className="bg-[#16213e] rounded-xl p-5 mb-6">
-          <h2 className="text-lg font-bold text-[#f0c040] mb-4">📊 آخر النتائج</h2>
-          <div className="flex flex-wrap gap-1 mb-2">
-            {sequence.slice(-20).map((id, index) => {
-              const symbol = SYMBOLS.find((s) => s.id === id);
-              return (
-                <span key={index} className="text-2xl">
-                  {symbol?.emoji}
-                </span>
-              );
-            })}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-1">آخر نتيجة</div>
+            <div className="text-2xl font-bold text-white">
+              {sequence.length > 0 ? SYMBOLS.find(s => s.id === sequence[sequence.length - 1])?.emoji : "-"}
+            </div>
           </div>
-          <p className="text-sm text-gray-400">إجمالي النتائج: {sequence.length}</p>
-        </div>
-
-        {/* تكرار كل رمز */}
-        <div className="bg-[#16213e] rounded-xl p-5 mb-6">
-          <h2 className="text-lg font-bold text-[#f0c040] mb-4">📈 تكرار كل رمز</h2>
-          <div className="space-y-3">
-            {counts.map((symbol) => (
-              <div key={symbol.id} className="flex items-center gap-3">
-                <div className="w-24 flex items-center gap-2">
-                  <span className="text-2xl">{symbol.emoji}</span>
-                  <span className="text-sm">{symbol.name}</span>
-                </div>
-                <div className="flex-1 h-[22px] bg-[#0f3460] rounded-full overflow-hidden">
-                  <div
-                    className="h-full transition-all duration-500"
-                    style={{
-                      width: `${(symbol.count / maxCount) * 100}%`,
-                      background: "linear-gradient(90deg, #f0c040, #e67e22)",
-                    }}
-                  />
-                </div>
-                <div className="w-24 text-left text-sm">
-                  {symbol.count} ({sequence.length > 0 ? ((symbol.count / sequence.length) * 100).toFixed(1) : 0}%)
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* شو بيجي بعد...؟ */}
-        <div className="bg-[#16213e] rounded-xl p-5">
-          <h2 className="text-lg font-bold text-[#f0c040] mb-4">🔮 شو بيجي بعد...؟</h2>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {SYMBOLS.map((symbol) => (
-              <button
-                key={symbol.id}
-                onClick={() => setSelectedSource(symbol.id)}
-                className={`px-4 py-2 rounded-lg text-xl transition ${
-                  selectedSource === symbol.id
-                    ? "bg-[#1a4d8f] border-2 border-[#f0c040]"
-                    : "bg-[#0f3460] border-2 border-[#1a4d8f] hover:bg-[#1a4d8f]"
-                }`}
-                title={symbol.name}
-              >
-                {symbol.emoji}
-              </button>
-            ))}
-          </div>
-
-          {selectedSource && (
-            <div>
-              <p className="text-sm text-gray-400 mb-3">
-                بعد {SYMBOLS.find((s) => s.id === selectedSource)?.name} ({selectedSourceTotal} انتقال):
-              </p>
-              {selectedSourceTotal === 0 ? (
-                <p className="text-gray-400">
-                  لم تأتِ {SYMBOLS.find((s) => s.id === selectedSource)?.name} في أي نتيجة بعد
-                </p>
+          {/* 👇 خانة الرموز المتوقعة */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-sm mb-1">الرموز المتوقعة</div>
+            <div className="text-xl font-bold text-white flex items-center gap-2">
+              {getExpectedSymbols().length > 0 ? (
+                getExpectedSymbols().map((symbol, index) => (
+                  <span key={symbol.id} className="flex items-center gap-1">
+                    {index > 0 && <span className="text-slate-600 text-xs">|</span>}
+                    <span className="text-2xl">{symbol.emoji}</span>
+                  </span>
+                ))
               ) : (
-                <div className="space-y-3">
-                  {conditionalData.map((target) => (
-                    <div key={target.id} className="flex items-center gap-3">
-                      <div className="w-24 flex items-center gap-2">
-                        <span className="text-2xl">{target.emoji}</span>
-                        <span className="text-sm">{target.name}</span>
-                      </div>
-                      <div className="flex-1 h-[22px] bg-[#0f3460] rounded-full overflow-hidden">
-                        <div
-                          className="h-full transition-all duration-500"
-                          style={{
-                            width: `${target.probability}%`,
-                            background: "linear-gradient(90deg, #3498db, #2980b9)",
-                          }}
-                        />
-                      </div>
-                      <div className="w-24 text-left text-sm">
-                        {target.count} ({target.probability.toFixed(1)}%)
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-sm text-slate-500">سجل المزيد</span>
               )}
             </div>
-          )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* العمود الأيمن: العجلة والأزرار */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* العجلة */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col items-center justify-center">
+              {renderWheel()}
+            </div>
+
+            {/* أزرار الإدخال */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-sm font-bold text-slate-300 mb-4 text-center">سجل النتيجة</h2>
+              <div className="grid grid-cols-4 gap-2">
+                {SYMBOLS.map((symbol) => (
+                  <button
+                    key={symbol.id}
+                    onClick={() => addResult(symbol.id)}
+                    className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-500/50 rounded-lg p-3 text-2xl flex items-center justify-center transition-all active:scale-95"
+                    title={symbol.name}
+                  >
+                    {symbol.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* آخر النتائج */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-sm font-bold text-slate-300 mb-4">آخر النتائج</h2>
+              <div className="flex flex-wrap gap-2">
+                {sequence.slice(-20).reverse().map((id, index) => {
+                  const symbol = SYMBOLS.find((s) => s.id === id);
+                  return <span key={index} className="text-xl bg-slate-800 p-1 rounded border border-slate-700">{symbol?.emoji}</span>;
+                })}
+                {sequence.length === 0 && <span className="text-slate-500 text-sm">لا توجد نتائج</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* العمود الأيسر: الجداول */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* تكرار كل رمز */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-800 bg-slate-900/50">
+                <h2 className="font-bold text-white">تكرار كل رمز</h2>
+              </div>
+              <div className="p-4 space-y-4">
+                {counts.map((symbol) => (
+                  <div key={symbol.id} className="flex items-center gap-4">
+                    <div className="w-24 flex items-center gap-2">
+                      <span className="text-xl">{symbol.emoji}</span>
+                      <span className="text-sm font-medium text-slate-300">{symbol.name}</span>
+                    </div>
+                    <div className="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                        style={{ width: `${(symbol.count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                    <div className="w-16 text-left text-sm font-mono text-slate-400">
+                      {symbol.count} <span className="text-xs">({sequence.length > 0 ? ((symbol.count / sequence.length) * 100).toFixed(0) : 0}%)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* شو بيجي بعد...؟ */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <h2 className="font-bold text-white">تحليل الانتقالات (شو بيجي بعد...؟)</h2>
+                {selectedSource && (
+                  <button onClick={() => setSelectedSource(null)} className="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+                    إلغاء التحديد <ChevronLeft size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="p-4">
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {SYMBOLS.map((symbol) => (
+                    <button
+                      key={symbol.id}
+                      onClick={() => setSelectedSource(symbol.id)}
+                      className={`px-3 py-2 rounded-lg text-lg transition-all border ${
+                        selectedSource === symbol.id
+                          ? "bg-amber-500/20 border-amber-500 text-amber-400"
+                          : "bg-slate-800 border-slate-700 hover:border-slate-500"
+                      }`}
+                    >
+                      {symbol.emoji}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedSource ? (
+                  <div>
+                    <p className="text-sm text-slate-400 mb-4">
+                      بعد {SYMBOLS.find((s) => s.id === selectedSource)?.name} ({selectedSourceTotal} انتقال):
+                    </p>
+                    {selectedSourceTotal === 0 ? (
+                      <p className="text-slate-500 text-sm text-center py-4 bg-slate-800/50 rounded-lg">
+                        لا توجد بيانات كافية لهذا الرمز
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {conditionalData.map((target) => (
+                          <div key={target.id} className="flex items-center gap-4">
+                            <div className="w-24 flex items-center gap-2">
+                              <span className="text-lg">{target.emoji}</span>
+                              <span className="text-sm text-slate-300">{target.name}</span>
+                            </div>
+                            <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                                style={{ width: `${target.probability}%` }}
+                              />
+                            </div>
+                            <div className="w-16 text-left text-sm font-mono text-slate-400">
+                              {target.count} <span className="text-xs">({target.probability.toFixed(0)}%)</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm text-center py-8">
+                    اختر رمزاً من الأعلى لتحليل ما يأتي بعده
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
