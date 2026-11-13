@@ -187,50 +187,99 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (تحليل أدق: بناءً على كل النتائج)
+  // 👇 الرموز المتوقعة (نظام متكامل: تصويت + فترات + ماركوف)
   const getExpectedSymbols = () => {
-    if (sequence.length < 3) return [];
+    if (sequence.length < 5) return [];
 
-    // 1. التكرار العام (من كل النتائج)
+    // 1. التكرار العام
     const globalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
     const totalGlobal = sequence.length;
-
-    // 2. التكرار الشرطي (من كل النتائج)
-    const totalConditionalCounts: Record<string, number> = {};
+    const freqScores: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
-      totalConditionalCounts[symbol.id] = 0;
+      freqScores[symbol.id] = (globalCounts[symbol.id] || 0) / totalGlobal;
     }
+
+    // 2. ماركوف من الدرجة الأولى (آخر رمز)
+    const lastSymbol = sequence[sequence.length - 1];
+    const firstOrderTransitions: Record<string, number> = {};
+    for (const symbol of SYMBOLS) firstOrderTransitions[symbol.id] = 0;
     for (let i = 0; i < sequence.length - 1; i++) {
-      const to = sequence[i + 1];
-      if (totalConditionalCounts[to] !== undefined) {
-        totalConditionalCounts[to]++;
+      if (sequence[i] === lastSymbol) {
+        const to = sequence[i + 1];
+        if (firstOrderTransitions[to] !== undefined) firstOrderTransitions[to]++;
+      }
+    }
+    const firstOrderTotal = Object.values(firstOrderTransitions).reduce((a, b) => a + b, 0);
+    const firstOrderScores: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      firstOrderScores[symbol.id] = firstOrderTotal > 0 ? (firstOrderTransitions[symbol.id] / firstOrderTotal) : 0;
+    }
+
+    // 3. ماركوف من الدرجة الثانية (آخر رمزين)
+    const secondOrderScores: Record<string, number> = {};
+    for (const symbol of SYMBOLS) secondOrderScores[symbol.id] = 0;
+    
+    if (sequence.length >= 2) {
+      const lastTwo = [sequence[sequence.length - 2], sequence[sequence.length - 1]];
+      const secondOrderTransitions: Record<string, number> = {};
+      for (const symbol of SYMBOLS) secondOrderTransitions[symbol.id] = 0;
+      
+      for (let i = 0; i < sequence.length - 2; i++) {
+        if (sequence[i] === lastTwo[0] && sequence[i + 1] === lastTwo[1]) {
+          const to = sequence[i + 2];
+          if (secondOrderTransitions[to] !== undefined) secondOrderTransitions[to]++;
+        }
+      }
+      const secondOrderTotal = Object.values(secondOrderTransitions).reduce((a, b) => a + b, 0);
+      for (const symbol of SYMBOLS) {
+        secondOrderScores[symbol.id] = secondOrderTotal > 0 ? (secondOrderTransitions[symbol.id] / secondOrderTotal) : 0;
       }
     }
 
-    // 3. دمج الاحتمالات (50% شرطي + 50% عام)
-    const scoredSymbols = SYMBOLS.map((symbol) => {
-      const globalProb = (globalCounts[symbol.id] || 0) / totalGlobal;
-      const conditionalProb = (totalConditionalCounts[symbol.id] || 0) / (sequence.length - 1 || 1);
-      
-      const blendedScore = (conditionalProb + globalProb) / 2;
+    // 4. تحليل الفترات (Gap Analysis)
+    const gapScores: Record<string, number> = {};
+    const lastSeenIndex: Record<string, number> = {};
+    
+    for (let i = sequence.length - 1; i >= 0; i--) {
+      if (!lastSeenIndex[sequence[i]]) {
+        lastSeenIndex[sequence[i]] = i;
+      }
+    }
 
-      return { ...symbol, score: blendedScore };
-    });
+    const maxGap = sequence.length;
+    for (const symbol of SYMBOLS) {
+      const lastIndex = lastSeenIndex[symbol.id] !== undefined ? lastSeenIndex[symbol.id] : -1;
+      const gap = lastIndex === -1 ? maxGap : (sequence.length - 1 - lastIndex);
+      gapScores[symbol.id] = gap / maxGap;
+    }
 
-    // 4. تقسيم لمجموعتين
+    // 5. الدمج النهائي (Ensemble Voting)
+    const finalScores: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      finalScores[symbol.id] = 
+        (freqScores[symbol.id] * 0.20) +
+        (firstOrderScores[symbol.id] * 0.30) +
+        (secondOrderScores[symbol.id] * 0.30) +
+        (gapScores[symbol.id] * 0.20);
+    }
+
+    // 6. الترتيب النهائي
+    const scoredSymbols = SYMBOLS.map((symbol) => ({
+      ...symbol,
+      score: finalScores[symbol.id] || 0,
+    }));
+
     const veggies = ["tomato", "carrot", "pepper", "corn"];
     const animals = ["shrimp", "fish", "sheep", "rooster"];
 
-    // 5. أفضل 3 خضار
     const topVeggies = scoredSymbols
       .filter(s => veggies.includes(s.id))
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
 
-    // 6. أفضل 2 حيوانات
     const topAnimals = scoredSymbols
       .filter(s => animals.includes(s.id))
       .sort((a, b) => b.score - a.score)
