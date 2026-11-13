@@ -256,14 +256,14 @@ export default function Home() {
       gapScores[symbol.id] = gap / maxGap;
     }
 
-    // 5. الدمج النهائي (Ensemble Voting)
+    // 5. الدمج النهائي (Ensemble Voting) - أوزان محسّنة
     const finalScores: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       finalScores[symbol.id] = 
-        (freqScores[symbol.id] * 0.20) +
-        (firstOrderScores[symbol.id] * 0.30) +
-        (secondOrderScores[symbol.id] * 0.30) +
-        (gapScores[symbol.id] * 0.20);
+        (firstOrderScores[symbol.id] * 0.40) +  // 👈 ماركوف 1 هو الأساس
+        (freqScores[symbol.id] * 0.30) +        // 👈 التكرار العام يدعمه
+        (secondOrderScores[symbol.id] * 0.15) + // 👈 ماركوف 2 خفيف
+        (gapScores[symbol.id] * 0.15);          // 👈 الفترات خفيفة
     }
 
     // 6. الترتيب النهائي
