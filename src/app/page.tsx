@@ -187,34 +187,33 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (بناءً على تحليل الانتقالات لآخر رمز فقط)
+  // 👇 الرموز المتوقعة (الطريقة القديمة اللي كانت شغالة)
   const getExpectedSymbols = () => {
     if (sequence.length < 3) return [];
 
-    // 1. آخر رمز سجلته
-    const lastSymbol = sequence[sequence.length - 1];
+    // 1. التكرار العام (من كل النتائج)
+    const globalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) {
+      globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
+    }
+    const totalGlobal = sequence.length;
 
-    // 2. نحسب الانتقالات من آخر رمز
-    const transitionsFromLast: Record<string, number> = {};
-    for (const symbol of SYMBOLS) transitionsFromLast[symbol.id] = 0;
-    
+    // 2. التكرار الشرطي (من كل النتائج)
+    const conditionalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) conditionalCounts[symbol.id] = 0;
     for (let i = 0; i < sequence.length - 1; i++) {
-      if (sequence[i] === lastSymbol) {
-        const to = sequence[i + 1];
-        if (transitionsFromLast[to] !== undefined) transitionsFromLast[to]++;
-      }
+      const to = sequence[i + 1];
+      if (conditionalCounts[to] !== undefined) conditionalCounts[to]++;
     }
 
-    const totalTransitions = Object.values(transitionsFromLast).reduce((a, b) => a + b, 0);
-    if (totalTransitions === 0) return [];
+    // 3. المزيج (50% شرطي + 50% عام)
+    const scoredSymbols = SYMBOLS.map((symbol) => {
+      const globalProb = (globalCounts[symbol.id] || 0) / totalGlobal;
+      const conditionalProb = (conditionalCounts[symbol.id] || 0) / (sequence.length - 1 || 1);
+      return { ...symbol, score: (globalProb + conditionalProb) / 2 };
+    });
 
-    // 3. نحسب النسبة المئوية لكل رمز (بناءً على الانتقالات فقط)
-    const scoredSymbols = SYMBOLS.map((symbol) => ({
-      ...symbol,
-      score: totalTransitions > 0 ? (transitionsFromLast[symbol.id] / totalTransitions) : 0,
-    }));
-
-    // 4. نرتبهم وناخد 3 خضار + 2 حيوانات
+    // 4. 3 خضار + 2 حيوانات
     const veggies = ["tomato", "carrot", "pepper", "corn"];
     const animals = ["shrimp", "fish", "sheep", "rooster"];
 
