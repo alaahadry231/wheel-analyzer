@@ -187,91 +187,33 @@ export default function Home() {
   const conditionalData = selectedSource ? getConditionalProbabilities(selectedSource) : [];
   const selectedSourceTotal = selectedSource ? Object.values(transitions[selectedSource] || {}).reduce((a, b) => a + b, 0) : 0;
 
-  // 👇 الرموز المتوقعة (نظام متكامل: تصويت + فترات + ماركوف)
+  // 👇 الرموز المتوقعة (الطريقة القديمة اللي كانت شغالة)
   const getExpectedSymbols = () => {
-    if (sequence.length < 5) return [];
+    if (sequence.length < 3) return [];
 
-    // 1. التكرار العام
+    // 1. التكرار العام (من كل النتائج)
     const globalCounts: Record<string, number> = {};
     for (const symbol of SYMBOLS) {
       globalCounts[symbol.id] = sequence.filter(id => id === symbol.id).length;
     }
     const totalGlobal = sequence.length;
-    const freqScores: Record<string, number> = {};
-    for (const symbol of SYMBOLS) {
-      freqScores[symbol.id] = (globalCounts[symbol.id] || 0) / totalGlobal;
-    }
 
-    // 2. ماركوف من الدرجة الأولى (آخر رمز)
-    const lastSymbol = sequence[sequence.length - 1];
-    const firstOrderTransitions: Record<string, number> = {};
-    for (const symbol of SYMBOLS) firstOrderTransitions[symbol.id] = 0;
+    // 2. التكرار الشرطي (من كل النتائج)
+    const conditionalCounts: Record<string, number> = {};
+    for (const symbol of SYMBOLS) conditionalCounts[symbol.id] = 0;
     for (let i = 0; i < sequence.length - 1; i++) {
-      if (sequence[i] === lastSymbol) {
-        const to = sequence[i + 1];
-        if (firstOrderTransitions[to] !== undefined) firstOrderTransitions[to]++;
-      }
-    }
-    const firstOrderTotal = Object.values(firstOrderTransitions).reduce((a, b) => a + b, 0);
-    const firstOrderScores: Record<string, number> = {};
-    for (const symbol of SYMBOLS) {
-      firstOrderScores[symbol.id] = firstOrderTotal > 0 ? (firstOrderTransitions[symbol.id] / firstOrderTotal) : 0;
+      const to = sequence[i + 1];
+      if (conditionalCounts[to] !== undefined) conditionalCounts[to]++;
     }
 
-    // 3. ماركوف من الدرجة الثانية (آخر رمزين)
-    const secondOrderScores: Record<string, number> = {};
-    for (const symbol of SYMBOLS) secondOrderScores[symbol.id] = 0;
-    
-    if (sequence.length >= 2) {
-      const lastTwo = [sequence[sequence.length - 2], sequence[sequence.length - 1]];
-      const secondOrderTransitions: Record<string, number> = {};
-      for (const symbol of SYMBOLS) secondOrderTransitions[symbol.id] = 0;
-      
-      for (let i = 0; i < sequence.length - 2; i++) {
-        if (sequence[i] === lastTwo[0] && sequence[i + 1] === lastTwo[1]) {
-          const to = sequence[i + 2];
-          if (secondOrderTransitions[to] !== undefined) secondOrderTransitions[to]++;
-        }
-      }
-      const secondOrderTotal = Object.values(secondOrderTransitions).reduce((a, b) => a + b, 0);
-      for (const symbol of SYMBOLS) {
-        secondOrderScores[symbol.id] = secondOrderTotal > 0 ? (secondOrderTransitions[symbol.id] / secondOrderTotal) : 0;
-      }
-    }
+    // 3. المزيج (50% شرطي + 50% عام)
+    const scoredSymbols = SYMBOLS.map((symbol) => {
+      const globalProb = (globalCounts[symbol.id] || 0) / totalGlobal;
+      const conditionalProb = (conditionalCounts[symbol.id] || 0) / (sequence.length - 1 || 1);
+      return { ...symbol, score: (globalProb + conditionalProb) / 2 };
+    });
 
-    // 4. تحليل الفترات (Gap Analysis)
-    const gapScores: Record<string, number> = {};
-    const lastSeenIndex: Record<string, number> = {};
-    
-    for (let i = sequence.length - 1; i >= 0; i--) {
-      if (!lastSeenIndex[sequence[i]]) {
-        lastSeenIndex[sequence[i]] = i;
-      }
-    }
-
-    const maxGap = sequence.length;
-    for (const symbol of SYMBOLS) {
-      const lastIndex = lastSeenIndex[symbol.id] !== undefined ? lastSeenIndex[symbol.id] : -1;
-      const gap = lastIndex === -1 ? maxGap : (sequence.length - 1 - lastIndex);
-      gapScores[symbol.id] = gap / maxGap;
-    }
-
-    // 5. الدمج النهائي (Ensemble Voting) - أوزان محسّنة
-    const finalScores: Record<string, number> = {};
-    for (const symbol of SYMBOLS) {
-      finalScores[symbol.id] = 
-        (firstOrderScores[symbol.id] * 0.40) +  // 👈 ماركوف 1 هو الأساس
-        (freqScores[symbol.id] * 0.30) +        // 👈 التكرار العام يدعمه
-        (secondOrderScores[symbol.id] * 0.15) + // 👈 ماركوف 2 خفيف
-        (gapScores[symbol.id] * 0.15);          // 👈 الفترات خفيفة
-    }
-
-    // 6. الترتيب النهائي
-    const scoredSymbols = SYMBOLS.map((symbol) => ({
-      ...symbol,
-      score: finalScores[symbol.id] || 0,
-    }));
-
+    // 4. 3 خضار + 2 حيوانات
     const veggies = ["tomato", "carrot", "pepper", "corn"];
     const animals = ["shrimp", "fish", "sheep", "rooster"];
 
