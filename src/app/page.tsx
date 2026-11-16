@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  RotateCcw, Trash2, Target, Sparkles, Activity,
-  Download, Upload, TrendingUp, BarChart3, ArrowRight
+  RotateCcw, Trash2, Sparkles, Activity, Crown,
+  Download, Upload, TrendingUp, BarChart3, ArrowRight,
+  Zap, Target, RefreshCw
 } from 'lucide-react';
 
 // ==========================================
@@ -32,9 +33,6 @@ export const SYMBOLS: SymbolInfo[] = [
   { id: 'fish',    name: 'سمكة',   emoji: '🐟', color: '#3B82F6', type: 'animal' },
 ];
 
-// ==========================================
-// أنواع البيانات
-// ==========================================
 interface SequenceRow {
   id: number;
   symbol_id: SymbolId;
@@ -123,77 +121,119 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B1120]">
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-[#0EA5E9] border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-slate-300">جارٍ التحميل...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
+        <div className="text-center animate-fade-in">
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 animate-spin"></div>
+          </div>
+          <p className="text-slate-400 text-sm">جارٍ التحميل...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen p-4 md:p-6" style={{ fontFamily: 'var(--font-cairo), sans-serif' }}>
-      <div className="max-w-7xl mx-auto">
-        
-        <header className="text-center mb-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            محلل العجلة
-          </h1>
-          <p className="text-slate-400 text-sm">أداة تحليل نتائج عجلة الحظ</p>
-        </header>
+    <main className="min-h-screen" style={{ fontFamily: 'var(--font-cairo), sans-serif' }}>
+      
+      {/* ========== Top Bar ========== */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0A0F]/70 border-b border-white/5">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Target className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white leading-tight">محلل العجلة</h1>
+              <p className="text-[10px] text-slate-500">Wheel Analyzer</p>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-2 md:gap-4">
+            <TopStat label="إجمالي" value={sequence.length} />
+            <TopStat label="آخر نتيجة" value={sequence.length > 0 ? SYMBOLS.find(s => s.id === sequence[sequence.length - 1].symbol_id)?.emoji ?? '—' : '—'} />
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-[11px] text-green-400 font-medium">متصل</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ========== Main Content ========== */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 md:py-8">
+
+        {/* Error */}
         {error && (
-          <div className="glass p-3 mb-4 text-red-400 text-sm text-center">
-            {error}
-            <button 
-              onClick={() => setError(null)}
-              className="mr-2 text-red-300 underline"
-            >
+          <div className="mb-6 surface p-3 flex items-center justify-between text-red-400 text-sm animate-fade-in">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-300 hover:text-white text-xs underline">
               إغلاق
             </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* ========== Hero Grid ========== */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-6">
 
-          <div className="lg:col-span-4 space-y-6">
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#0EA5E9]" />
-                العجلة
-              </h2>
-              <WheelDisplay sequence={sequence} />
+          {/* Wheel — Big */}
+          <div className="lg:col-span-5 surface-elevated p-6 md:p-8 flex flex-col items-center justify-center min-h-[440px]">
+            <div className="w-full flex items-center justify-between mb-4">
+              <div>
+                <p className="section-label">العجلة</p>
+                <p className="text-xs text-slate-500 mt-0.5">Wheel Overview</p>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                <Zap className="w-3 h-3 text-indigo-400" />
+                <span className="text-[10px] text-indigo-300 font-medium">Live</span>
+              </div>
             </div>
+            <WheelDisplay sequence={sequence} />
+          </div>
 
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#F59E0B]" />
-                سجّل النتيجة
-              </h2>
-              <div className="grid grid-cols-4 gap-2">
+          {/* Controls */}
+          <div className="lg:col-span-7 space-y-5">
+
+            {/* Register */}
+            <div className="surface p-5 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="section-label">تسجيل</p>
+                  <p className="text-sm font-semibold text-white mt-0.5">سجّل النتيجة</p>
+                </div>
+                <Sparkles className="w-4 h-4 text-amber-400" />
+              </div>
+
+              <div className="grid grid-cols-4 gap-2.5 md:gap-3">
                 {SYMBOLS.map((sym) => (
                   <button
                     key={sym.id}
                     onClick={() => handleAddSymbol(sym.id)}
                     disabled={submitting}
-                    className="glass-strong p-3 rounded-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 flex flex-col items-center gap-1 group"
-                    style={{ borderColor: `${sym.color}40` }}
+                    className="group relative surface-subtle p-3 md:p-4 flex flex-col items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
                     title={sym.name}
                   >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      style={{ background: `radial-gradient(circle at center, ${sym.color}15, transparent 70%)` }}
+                    />
+                    <span className="relative text-2xl md:text-3xl group-hover:scale-110 transition-transform duration-200">
                       {sym.emoji}
                     </span>
-                    <span className="text-[10px] text-slate-300">{sym.name}</span>
+                    <span className="relative text-[10px] text-slate-400 group-hover:text-white transition-colors font-medium">{sym.name}</span>
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ backgroundColor: sym.color }}
+                    />
                   </button>
                 ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-4">
+              <div className="grid grid-cols-2 gap-2.5 mt-4">
                 <button
                   onClick={handleUndo}
                   disabled={submitting || sequence.length === 0}
-                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-sm transition-all disabled:opacity-40"
+                  className="btn-ghost flex items-center justify-center gap-2 px-3 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <RotateCcw className="w-4 h-4" />
                   تراجع
@@ -201,7 +241,7 @@ export default function HomePage() {
                 <button
                   onClick={handleClearAll}
                   disabled={submitting || sequence.length === 0}
-                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/40 text-orange-300 text-sm transition-all disabled:opacity-40"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="w-4 h-4" />
                   مسح الكل
@@ -209,174 +249,304 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-[#0EA5E9]" />
-                الغياب (Gap)
-              </h2>
-              <GapDisplay sequence={sequence} />
-            </div>
-          </div>
-
-          <div className="lg:col-span-8 space-y-6">
-
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard title="إجمالي النتائج" value={sequence.length} icon="📊" color="blue" />
-              <StatCard title="الرمز الأكثر" value={getMostFrequent(sequence)} icon="👑" color="gold" />
-            </div>
-
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-[#0EA5E9]" />
-                تكرار كل رمز
-              </h2>
-              <FrequencyList sequence={sequence} />
-            </div>
-
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <ArrowRight className="w-5 h-5 text-[#0EA5E9]" />
-                تحليل الانتقالات
-              </h2>
-              <TransitionAnalyzer sequence={sequence} />
-            </div>
-
-            <div className="glass p-4">
-              <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-[#F59E0B]" />
-                الرموز المتوقعة (تحليل متقدم)
-              </h2>
-              <ExpectedSymbols sequence={sequence} />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="glass p-4">
-                <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                  <Download className="w-5 h-5 text-[#0EA5E9]" />
-                  استيراد / تصدير
-                </h2>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => exportCSV(sequence)}
-                    disabled={sequence.length === 0}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0EA5E9]/20 hover:bg-[#0EA5E9]/30 border border-[#0EA5E9]/40 text-[#0EA5E9] text-sm transition-all disabled:opacity-40"
-                  >
-                    <Download className="w-4 h-4" />
-                    تصدير CSV
-                  </button>
-                  <label className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-300 text-sm transition-all cursor-pointer">
-                    <Upload className="w-4 h-4" />
-                    استيراد CSV
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) await importCSV(file, fetchSequence);
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="glass p-4">
-                <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-[#0EA5E9]" />
-                  آخر 20 نتيجة
-                </h2>
-                <LastResults sequence={sequence} />
-              </div>
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <QuickStat 
+                label="إجمالي النتائج" 
+                value={sequence.length} 
+                icon={<BarChart3 className="w-4 h-4" />}
+                accent="indigo"
+              />
+              <QuickStat 
+                label="الرمز الأكثر" 
+                value={getMostFrequent(sequence)} 
+                icon={<Crown className="w-4 h-4" />}
+                accent="amber"
+              />
             </div>
           </div>
         </div>
+
+        {/* ========== Bento Grid: Analytics ========== */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6">
+
+          {/* Frequency */}
+          <div className="lg:col-span-4 surface p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">تكرار الرموز</p>
+                <p className="text-[10px] text-slate-500">Frequency</p>
+              </div>
+            </div>
+            <FrequencyList sequence={sequence} />
+          </div>
+
+          {/* Gap */}
+          <div className="lg:col-span-4 surface p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">الغياب (Gap)</p>
+                <p className="text-[10px] text-slate-500">Missed Rounds</p>
+              </div>
+            </div>
+            <GapDisplay sequence={sequence} />
+          </div>
+
+          {/* Expected */}
+          <div className="lg:col-span-4 surface p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">الرموز المتوقعة</p>
+                <p className="text-[10px] text-slate-500">Predicted</p>
+              </div>
+            </div>
+            <ExpectedSymbols sequence={sequence} />
+          </div>
+
+          {/* Transition */}
+          <div className="lg:col-span-7 surface p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">تحليل الانتقالات</p>
+                <p className="text-[10px] text-slate-500">Transitions</p>
+              </div>
+            </div>
+            <TransitionAnalyzer sequence={sequence} />
+          </div>
+
+          {/* Last Results */}
+          <div className="lg:col-span-5 surface p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
+                <RefreshCw className="w-3.5 h-3.5 text-pink-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">آخر 20 نتيجة</p>
+                <p className="text-[10px] text-slate-500">Recent Results</p>
+              </div>
+            </div>
+            <LastResults sequence={sequence} />
+          </div>
+
+          {/* CSV */}
+          <div className="lg:col-span-12 surface p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">استيراد / تصدير</p>
+                  <p className="text-[10px] text-slate-500">CSV Import & Export</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto">
+                <button
+                  onClick={() => exportCSV(sequence)}
+                  disabled={sequence.length === 0}
+                  className="btn-ghost flex items-center justify-center gap-2 px-4 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" />
+                  تصدير CSV
+                </button>
+                <label className="btn-accent flex items-center justify-center gap-2 px-4 py-2.5 text-sm cursor-pointer">
+                  <Upload className="w-4 h-4" />
+                  استيراد CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) await importCSV(file, fetchSequence);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 mt-4">
+        <div className="flex items-center justify-between text-[11px] text-slate-600">
+          <span>Wheel Analyzer — محلل العجلة</span>
+          <span>Data-driven predictions</span>
+        </div>
+      </footer>
     </main>
   );
 }
 
 // ==========================================
-// مكون: رسم العجلة
+// Small Components
+// ==========================================
+function TopStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex flex-col items-center md:items-end">
+      <span className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</span>
+      <span className="text-sm font-bold text-white stat-number">{value}</span>
+    </div>
+  );
+}
+
+function QuickStat({ 
+  label, value, icon, accent 
+}: { 
+  label: string; value: string | number; icon: React.ReactNode; accent: 'indigo' | 'amber' 
+}) {
+  const accentStyles = {
+    indigo: 'from-indigo-500/10 to-transparent border-indigo-500/20 text-indigo-400',
+    amber: 'from-amber-500/10 to-transparent border-amber-500/20 text-amber-400',
+  };
+  
+  return (
+    <div className={`surface p-4 md:p-5 relative overflow-hidden group`}>
+      <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-bl ${accentStyles[accent]} opacity-50`}></div>
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-2xl md:text-3xl font-bold text-white stat-number">{value}</p>
+        </div>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${accentStyles[accent]}`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// Wheel Display
 // ==========================================
 function WheelDisplay({ sequence }: { sequence: SequenceRow[] }) {
-  const size = 280;
+  const size = 400;
   const center = size / 2;
-  const radius = center - 20;
+  const radius = center - 40;
   const sliceAngle = (2 * Math.PI) / SYMBOLS.length;
   const lastSymbol = sequence.length > 0 ? sequence[sequence.length - 1].symbol_id : null;
 
   return (
-    <div className="flex flex-col items-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl">
-        <circle cx={center} cy={center} r={radius + 10} fill="none" stroke="#1E293B" strokeWidth="4" />
+    <div className="flex flex-col items-center animate-fade-in-scale">
+      <div className="relative">
+        {/* Glow */}
+        <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-3xl scale-90"></div>
         
-        {SYMBOLS.map((sym, i) => {
-          const startAngle = i * sliceAngle - Math.PI / 2;
-          const endAngle = (i + 1) * sliceAngle - Math.PI / 2;
-          const x1 = center + radius * Math.cos(startAngle);
-          const y1 = center + radius * Math.sin(startAngle);
-          const x2 = center + radius * Math.cos(endAngle);
-          const y2 = center + radius * Math.sin(endAngle);
-          const largeArc = sliceAngle > Math.PI ? 1 : 0;
-          const path = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-          const midAngle = (startAngle + endAngle) / 2;
-          const textX = center + (radius * 0.65) * Math.cos(midAngle);
-          const textY = center + (radius * 0.65) * Math.sin(midAngle);
-          const isLast = lastSymbol === sym.id;
-
-          return (
-            <g key={sym.id}>
-              <path
-                d={path}
-                fill={sym.color}
-                opacity={isLast ? 1 : 0.85}
-                stroke="#0B1120"
-                strokeWidth="2"
-                className={isLast ? 'animate-pulse' : ''}
-              />
-              <text
-                x={textX}
-                y={textY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize="28"
-                className="select-none"
-                style={{ pointerEvents: 'none' }}
-              >
-                {sym.emoji}
-              </text>
-            </g>
-          );
-        })}
-
-        <circle cx={center} cy={center} r={30} fill="#0B1120" stroke="#0EA5E9" strokeWidth="2" />
-        <text
-          x={center}
-          y={center}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="12"
-          fill="#0EA5E9"
-          fontWeight="bold"
+        <svg 
+          width={size} 
+          height={size} 
+          viewBox={`0 0 ${size} ${size}`} 
+          className="relative drop-shadow-2xl"
         >
-          {sequence.length}
-        </text>
-      </svg>
+          {/* Outer ring */}
+          <circle cx={center} cy={center} r={radius + 20} fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="1" />
+          <circle cx={center} cy={center} r={radius + 12} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
+          
+          {/* Segments */}
+          {SYMBOLS.map((sym, i) => {
+            const startAngle = i * sliceAngle - Math.PI / 2;
+            const endAngle = (i + 1) * sliceAngle - Math.PI / 2;
+            const x1 = center + radius * Math.cos(startAngle);
+            const y1 = center + radius * Math.sin(startAngle);
+            const x2 = center + radius * Math.cos(endAngle);
+            const y2 = center + radius * Math.sin(endAngle);
+            const largeArc = sliceAngle > Math.PI ? 1 : 0;
+            const path = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+            const midAngle = (startAngle + endAngle) / 2;
+            const textX = center + (radius * 0.68) * Math.cos(midAngle);
+            const textY = center + (radius * 0.68) * Math.sin(midAngle);
+            const isLast = lastSymbol === sym.id;
+
+            return (
+              <g key={sym.id}>
+                <path
+                  d={path}
+                  fill={sym.color}
+                  opacity={isLast ? 1 : 0.7}
+                  stroke="#0A0A0F"
+                  strokeWidth="1.5"
+                  className={isLast ? 'animate-pulse' : ''}
+                  style={{ transition: 'opacity 0.3s' }}
+                />
+                <text
+                  x={textX}
+                  y={textY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="36"
+                  className="select-none"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {sym.emoji}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Center */}
+          <circle cx={center} cy={center} r="46" fill="#0A0A0F" stroke="rgba(99,102,241,0.4)" strokeWidth="2" />
+          <circle cx={center} cy={center} r="40" fill="url(#centerGrad)" />
+          <defs>
+            <radialGradient id="centerGrad">
+              <stop offset="0%" stopColor="#1E1E2E" />
+              <stop offset="100%" stopColor="#0A0A0F" />
+            </radialGradient>
+          </defs>
+          <text
+            x={center}
+            y={center - 4}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize="22"
+            fill="#FFFFFF"
+            fontWeight="800"
+            className="stat-number"
+          >
+            {sequence.length}
+          </text>
+          <text
+            x={center}
+            y={center + 14}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize="8"
+            fill="#64748B"
+            fontWeight="600"
+            letterSpacing="1"
+          >
+            TOTAL
+          </text>
+        </svg>
+      </div>
 
       {lastSymbol && (
-        <p className="mt-2 text-sm text-slate-300">
-          آخر نتيجة: <span className="text-white font-bold">
-            {SYMBOLS.find(s => s.id === lastSymbol)?.emoji} {SYMBOLS.find(s => s.id === lastSymbol)?.name}
-          </span>
-        </p>
+        <div className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full surface-subtle animate-fade-in">
+          <span className="text-xs text-slate-500">آخر نتيجة</span>
+          <span className="text-lg">{SYMBOLS.find(s => s.id === lastSymbol)?.emoji}</span>
+          <span className="text-sm font-bold text-white">{SYMBOLS.find(s => s.id === lastSymbol)?.name}</span>
+        </div>
       )}
     </div>
   );
 }
 
 // ==========================================
-// مكون: الغياب (Gap)
+// Gap Display
 // ==========================================
 function GapDisplay({ sequence }: { sequence: SequenceRow[] }) {
   const gaps = SYMBOLS.map((sym) => {
@@ -390,27 +560,32 @@ function GapDisplay({ sequence }: { sequence: SequenceRow[] }) {
   });
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {gaps.map((g) => {
-        let colorClass = 'text-green-400 bg-green-500/20 border-green-500/40';
+        let colorClass = 'text-green-400 bg-green-500/10 border-green-500/20';
+        let dotColor = 'bg-green-500';
         if (g.neverAppeared) {
-          colorClass = 'text-slate-400 bg-slate-500/20 border-slate-500/40';
+          colorClass = 'text-slate-400 bg-slate-500/10 border-slate-500/20';
+          dotColor = 'bg-slate-500';
         } else if (g.gap > 20) {
-          colorClass = 'text-red-400 bg-red-500/20 border-red-500/40';
+          colorClass = 'text-red-400 bg-red-500/10 border-red-500/20';
+          dotColor = 'bg-red-500';
         } else if (g.gap >= 10) {
-          colorClass = 'text-yellow-400 bg-yellow-500/20 border-yellow-500/40';
+          colorClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+          dotColor = 'bg-amber-500';
         }
 
         return (
           <div
             key={g.id}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg border ${colorClass}`}
+            className={`flex items-center justify-between px-3 py-2 rounded-lg border ${colorClass} transition-all hover:scale-[1.01]`}
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">{g.emoji}</span>
-              <span className="text-sm font-semibold">{g.name}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></span>
+              <span className="text-base">{g.emoji}</span>
+              <span className="text-xs font-medium">{g.name}</span>
             </div>
-            <span className="text-sm font-bold">
+            <span className="text-sm font-bold stat-number">
               {g.neverAppeared ? '—' : g.gap}
             </span>
           </div>
@@ -421,7 +596,7 @@ function GapDisplay({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// دوال مساعدة
+// Helpers
 // ==========================================
 function getMostFrequent(sequence: SequenceRow[]): string {
   if (sequence.length === 0) return '—';
@@ -433,26 +608,7 @@ function getMostFrequent(sequence: SequenceRow[]): string {
 }
 
 // ==========================================
-// مكون: بطاقة إحصائية
-// ==========================================
-function StatCard({ title, value, icon, color }: { title: string; value: string | number; icon: string; color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'border-[#0EA5E9]/40 text-[#0EA5E9]',
-    gold: 'border-[#F59E0B]/40 text-[#F59E0B]',
-    green: 'border-green-500/40 text-green-400',
-    red: 'border-red-500/40 text-red-400',
-  };
-  return (
-    <div className={`glass-strong p-3 rounded-xl border ${colors[color]} text-center`}>
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-[10px] text-slate-400 mt-1">{title}</div>
-    </div>
-  );
-}
-
-// ==========================================
-// مكون: تكرار كل رمز
+// Frequency List
 // ==========================================
 function FrequencyList({ sequence }: { sequence: SequenceRow[] }) {
   const total = sequence.length;
@@ -466,17 +622,21 @@ function FrequencyList({ sequence }: { sequence: SequenceRow[] }) {
         const count = counts[sym.id] || 0;
         const pct = total > 0 ? (count / total) * 100 : 0;
         return (
-          <div key={sym.id} className="flex items-center gap-2">
-            <span className="text-lg w-6">{sym.emoji}</span>
-            <div className="flex-1 h-6 bg-slate-800 rounded-full overflow-hidden">
+          <div key={sym.id} className="flex items-center gap-2 group">
+            <span className="text-base w-6 shrink-0">{sym.emoji}</span>
+            <div className="flex-1 h-6 bg-white/[0.03] rounded-full overflow-hidden relative">
               <div
-                className="h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: sym.color }}
+                className="h-full rounded-full transition-all duration-700 ease-out flex items-center justify-end pr-2"
+                style={{ 
+                  width: `${Math.max(pct, 4)}%`, 
+                  background: `linear-gradient(90deg, ${sym.color}, ${sym.color}dd)`,
+                  boxShadow: `0 0 12px ${sym.color}40`
+                }}
               >
-                <span className="text-[10px] text-white font-bold">{count}</span>
+                <span className="text-[9px] text-white font-bold stat-number">{count}</span>
               </div>
             </div>
-            <span className="text-xs text-slate-400 w-12 text-left">{pct.toFixed(1)}%</span>
+            <span className="text-[10px] text-slate-500 w-10 text-left stat-number shrink-0">{pct.toFixed(0)}%</span>
           </div>
         );
       })}
@@ -485,7 +645,7 @@ function FrequencyList({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// مكون: تحليل الانتقالات
+// Transition Analyzer
 // ==========================================
 function TransitionAnalyzer({ sequence }: { sequence: SequenceRow[] }) {
   const [selected, setSelected] = useState<SymbolId | null>(null);
@@ -510,40 +670,44 @@ function TransitionAnalyzer({ sequence }: { sequence: SequenceRow[] }) {
 
   return (
     <div>
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-2 mb-3">
+      <p className="text-[10px] text-slate-500 mb-2">اختر رمز لتحليل ما يليه</p>
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 mb-3">
         {SYMBOLS.map(sym => (
           <button
             key={sym.id}
             onClick={() => setSelected(selected === sym.id ? null : sym.id)}
-            className={`p-2 rounded-lg transition-all border ${
+            className={`p-2 rounded-lg transition-all border text-xl ${
               selected === sym.id
-                ? 'bg-[#0EA5E9]/20 border-[#0EA5E9]'
-                : 'glass-strong border-transparent hover:border-slate-500'
+                ? 'bg-indigo-500/20 border-indigo-500/50 scale-105 shadow-lg shadow-indigo-500/20'
+                : 'surface-subtle border-transparent hover:border-white/10'
             }`}
           >
-            <div className="text-xl">{sym.emoji}</div>
+            {sym.emoji}
           </button>
         ))}
       </div>
 
       {selected && (
-        <div className="mt-3 space-y-1">
-          <p className="text-xs text-slate-400 mb-2">احتمالات الرموز بعد {SYMBOLS.find(s => s.id === selected)?.emoji}:</p>
+        <div className="space-y-1.5 animate-fade-in">
+          <p className="text-[10px] text-slate-500 mb-1">احتمالات الرموز بعد {SYMBOLS.find(s => s.id === selected)?.emoji}:</p>
           {SYMBOLS
             .map(s => ({ ...s, pct: transitions[s.id] || 0 }))
             .sort((a, b) => b.pct - a.pct)
             .filter(s => s.pct > 0)
             .map(s => (
-              <div key={s.id} className="flex items-center gap-2 text-sm">
-                <span>{s.emoji}</span>
-                <div className="flex-1 h-4 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${s.pct}%`, backgroundColor: s.color }} />
+              <div key={s.id} className="flex items-center gap-2 text-xs">
+                <span className="w-5">{s.emoji}</span>
+                <div className="flex-1 h-4 bg-white/[0.03] rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${s.pct}%`, backgroundColor: s.color }}
+                  />
                 </div>
-                <span className="text-xs text-slate-400 w-12 text-left">{s.pct.toFixed(1)}%</span>
+                <span className="text-[10px] text-slate-400 w-10 text-left stat-number">{s.pct.toFixed(0)}%</span>
               </div>
             ))}
           {Object.values(transitions).every(v => v === 0) && (
-            <p className="text-xs text-slate-500 text-center py-2">لا توجد بيانات كافية</p>
+            <p className="text-[10px] text-slate-600 text-center py-2">لا توجد بيانات كافية</p>
           )}
         </div>
       )}
@@ -552,18 +716,14 @@ function TransitionAnalyzer({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// دوال التحليل الإحصائي المتقدم
+// Advanced Analysis
 // ==========================================
-
-// حساب الفترات بين ظهور كل رمز
 function getSymbolIntervals(sequence: SequenceRow[], symbolId: SymbolId): number[] {
   const indexes: number[] = [];
   sequence.forEach((row, idx) => {
     if (row.symbol_id === symbolId) indexes.push(idx);
   });
-  
   if (indexes.length < 2) return [];
-  
   const intervals: number[] = [];
   for (let i = 1; i < indexes.length; i++) {
     intervals.push(indexes[i] - indexes[i - 1]);
@@ -571,7 +731,6 @@ function getSymbolIntervals(sequence: SequenceRow[], symbolId: SymbolId): number
   return intervals;
 }
 
-// حساب متوسط الفترات
 function getAverageInterval(intervals: number[]): number | null {
   if (intervals.length === 0) return null;
   const sum = intervals.reduce((a, b) => a + b, 0);
@@ -579,28 +738,23 @@ function getAverageInterval(intervals: number[]): number | null {
 }
 
 // ==========================================
-// مكون: الرموز المتوقعة (الخوارزمية المتقدمة)
+// Expected Symbols
 // ==========================================
 function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
   if (sequence.length === 0) {
-    return <p className="text-sm text-slate-500 text-center py-4">لا توجد بيانات كافية</p>;
+    return <p className="text-xs text-slate-600 text-center py-6">لا توجد بيانات كافية</p>;
   }
 
   const total = sequence.length;
   const recent = sequence.slice(-15);
   const recentTotal = recent.length;
 
-  // حساب نقاط كل رمز
   const scores = SYMBOLS.map(sym => {
-    // 1. التكرار العام
     const totalCount = sequence.filter(s => s.symbol_id === sym.id).length;
     const generalPct = (totalCount / total) * 100;
-
-    // 2. التكرار الشرطي (آخر 15)
     const recentCount = recent.filter(s => s.symbol_id === sym.id).length;
     const recentPct = recentTotal > 0 ? (recentCount / recentTotal) * 100 : 0;
 
-    // 3. الغياب الحالي
     let currentGap = 0;
     for (let i = sequence.length - 1; i >= 0; i--) {
       if (sequence[i].symbol_id === sym.id) break;
@@ -608,18 +762,14 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
     }
     const neverAppeared = totalCount === 0;
 
-    // 4. تحليل الفترات
     const intervals = getSymbolIntervals(sequence, sym.id);
     const avgInterval = getAverageInterval(intervals);
     
-    // 5. حساب "التأخر" عن المتوسط
-    let overdueRatio = 0;
     let overdueBonus = 0;
     let overdueInfo: string | null = null;
 
     if (avgInterval !== null && avgInterval > 0) {
-      overdueRatio = currentGap / avgInterval;
-      // إذا الغياب الحالي > 1.5 × المتوسط، نعتبره "متأخر" ونعطيه مكافأة
+      const overdueRatio = currentGap / avgInterval;
       if (overdueRatio > 1.5) {
         overdueBonus = 15;
         overdueInfo = `متأخر ${currentGap} عن متوسط ${avgInterval.toFixed(1)}`;
@@ -628,76 +778,64 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
       }
     }
 
-    // 6. وزن الغياب (بحد أقصى 30 نقطة)
     const gapWeight = Math.min((currentGap / Math.max(total, 1)) * 100 * 2, 30);
 
-    // 7. النقاط النهائية
     let score;
     if (neverAppeared) {
-      // رمز جديد ما ظهر أبداً: نعتمد على التكرار العام بس (نقطة صغيرة للاحتياط)
       score = generalPct * 0.5 + 5;
     } else {
-      score = 
-        (generalPct * 0.4) +   // 40% تكرار عام
-        (recentPct * 0.3) +    // 30% تكرار شرطي
-        (gapWeight * 0.3) +    // 30% وزن غياب
-        overdueBonus;          // مكافأة التأخر
+      score = (generalPct * 0.4) + (recentPct * 0.3) + (gapWeight * 0.3) + overdueBonus;
     }
 
     return {
-      ...sym,
-      score,
-      currentGap,
-      avgInterval,
-      overdueInfo,
-      neverAppeared,
-      overdueBonus,
-      generalPct,
-      recentPct,
-      gapWeight,
+      ...sym, score, currentGap, avgInterval, overdueInfo,
+      neverAppeared, overdueBonus, generalPct, recentPct, gapWeight,
     };
   }).sort((a, b) => b.score - a.score);
 
-  // تصنيف: 3 خضار + 2 حيوانات
   const veggies = scores.filter(s => s.type === 'vegetable').slice(0, 3);
   const animals = scores.filter(s => s.type === 'animal').slice(0, 2);
   const finalPicks = [...veggies, ...animals].sort((a, b) => b.score - a.score);
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {finalPicks.map(s => (
           <div 
             key={s.id} 
-            className={`glass-strong p-2 rounded-lg text-center border ${
-              s.overdueBonus > 0 ? 'border-green-500/60' : 'border-[#F59E0B]/30'
+            className={`relative p-2 rounded-xl text-center border transition-all hover:scale-105 ${
+              s.overdueBonus > 0 
+                ? 'bg-green-500/10 border-green-500/40 shadow-lg shadow-green-500/10' 
+                : 'surface-subtle border-white/5'
             }`}
           >
-            <div className="text-2xl">{s.emoji}</div>
-            <div className="text-[10px] text-slate-300 mt-1">{s.name}</div>
-            <div className="text-xs text-[#F59E0B] font-bold mt-1">{s.score.toFixed(1)}%</div>
+            <div className="text-xl md:text-2xl">{s.emoji}</div>
+            <div className="text-[9px] text-slate-400 mt-0.5">{s.name}</div>
+            <div className={`text-[11px] font-bold mt-0.5 stat-number ${s.overdueBonus > 0 ? 'text-green-400' : 'text-amber-400'}`}>
+              {s.score.toFixed(0)}%
+            </div>
             {s.overdueBonus > 0 && (
-              <div className="text-[9px] text-green-400 mt-1">🔥 متأخر</div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px]">
+                🔥
+              </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* تفاصيل السبب */}
-      <div className="mt-3 space-y-1 border-t border-slate-700/50 pt-3">
-        <p className="text-xs text-slate-400 mb-2 font-semibold">تفاصيل التوقع:</p>
+      <div className="mt-3 pt-3 border-t border-white/5 space-y-1">
         {finalPicks.map(s => (
-          <div key={s.id} className="flex items-center gap-2 text-xs">
-            <span className="text-base">{s.emoji}</span>
-            <span className="text-slate-300 w-16">{s.name}</span>
-            <div className="flex-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
-              <span>عام: {s.generalPct.toFixed(1)}%</span>
-              <span>شرطي: {s.recentPct.toFixed(1)}%</span>
-              <span>غياب: {s.currentGap}</span>
-              {s.overdueInfo && (
-                <span className={s.overdueBonus > 0 ? 'text-green-400' : ''}>
-                  {s.overdueInfo}
-                </span>
+          <div key={s.id} className="flex items-center gap-2 text-[10px]">
+            <span className="text-sm w-5">{s.emoji}</span>
+            <span className="text-slate-400 w-14 truncate">{s.name}</span>
+            <div className="flex-1 flex flex-wrap gap-x-2 gap-y-0.5 text-slate-500">
+              <span>عام <span className="text-slate-300 stat-number">{s.generalPct.toFixed(0)}%</span></span>
+              <span>·</span>
+              <span>شرطي <span className="text-slate-300 stat-number">{s.recentPct.toFixed(0)}%</span></span>
+              <span>·</span>
+              <span>غياب <span className="text-slate-300 stat-number">{s.currentGap}</span></span>
+              {s.overdueBonus > 0 && (
+                <span className="text-green-400">· 🔥 متأخر</span>
               )}
             </div>
           </div>
@@ -708,23 +846,25 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// مكون: آخر النتائج
+// Last Results
 // ==========================================
 function LastResults({ sequence }: { sequence: SequenceRow[] }) {
   const last = sequence.slice(-20).reverse();
   if (last.length === 0) {
-    return <p className="text-sm text-slate-500 text-center py-4">لا توجد نتائج بعد</p>;
+    return <p className="text-xs text-slate-600 text-center py-6">لا توجد نتائج بعد</p>;
   }
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1.5">
       {last.map((row, idx) => {
         const sym = SYMBOLS.find(s => s.id === row.symbol_id);
         const isHighlighted = idx === 10 || idx === 19;
         return (
           <div
             key={row.id}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${
-              isHighlighted ? 'bg-green-500/30 border border-green-500/60' : 'glass-strong'
+            className={`relative w-9 h-9 rounded-lg flex items-center justify-center text-lg transition-all hover:scale-110 ${
+              isHighlighted 
+                ? 'bg-green-500/20 border border-green-500/50 shadow-lg shadow-green-500/20' 
+                : 'surface-subtle'
             }`}
             title={`${sym?.name} - ${idx + 1}`}
           >
@@ -737,7 +877,7 @@ function LastResults({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// دوال CSV
+// CSV Functions
 // ==========================================
 function exportCSV(sequence: SequenceRow[]) {
   const header = 'id,symbol_id,created_at\n';
@@ -760,7 +900,6 @@ async function importCSV(file: File, onDone: () => Promise<void>) {
   }
   const dataLines = lines.slice(1);
   const validIds = SYMBOLS.map(s => s.id);
-
   let added = 0;
   for (const line of dataLines) {
     const parts = line.split(',');
