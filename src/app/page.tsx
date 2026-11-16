@@ -163,7 +163,6 @@ export default function HomePage() {
       {/* ========== Main Content ========== */}
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 md:py-8">
 
-        {/* Error */}
         {error && (
           <div className="mb-6 surface p-3 flex items-center justify-between text-red-400 text-sm animate-fade-in">
             <span>{error}</span>
@@ -176,7 +175,7 @@ export default function HomePage() {
         {/* ========== Hero Grid ========== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-6">
 
-          {/* Wheel — Big */}
+          {/* Wheel */}
           <div className="lg:col-span-5 surface-elevated p-6 md:p-8 flex flex-col items-center justify-center min-h-[440px]">
             <div className="w-full flex items-center justify-between mb-4">
               <div>
@@ -191,7 +190,7 @@ export default function HomePage() {
             <WheelDisplay sequence={sequence} />
           </div>
 
-          {/* Controls */}
+          {/* Controls + Last Results */}
           <div className="lg:col-span-7 space-y-5">
 
             {/* Register */}
@@ -247,6 +246,20 @@ export default function HomePage() {
                   مسح الكل
                 </button>
               </div>
+            </div>
+
+            {/* Last Results — NOW UNDER REGISTER */}
+            <div className="surface p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
+                  <RefreshCw className="w-3.5 h-3.5 text-pink-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">آخر 20 نتيجة</p>
+                  <p className="text-[10px] text-slate-500">Recent Results</p>
+                </div>
+              </div>
+              <LastResults sequence={sequence} />
             </div>
 
             {/* Quick Stats */}
@@ -313,7 +326,7 @@ export default function HomePage() {
           </div>
 
           {/* Transition */}
-          <div className="lg:col-span-7 surface p-5">
+          <div className="lg:col-span-12 surface p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                 <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
@@ -324,20 +337,6 @@ export default function HomePage() {
               </div>
             </div>
             <TransitionAnalyzer sequence={sequence} />
-          </div>
-
-          {/* Last Results */}
-          <div className="lg:col-span-5 surface p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
-                <RefreshCw className="w-3.5 h-3.5 text-pink-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">آخر 20 نتيجة</p>
-                <p className="text-[10px] text-slate-500">Recent Results</p>
-              </div>
-            </div>
-            <LastResults sequence={sequence} />
           </div>
 
           {/* CSV */}
@@ -444,7 +443,6 @@ function WheelDisplay({ sequence }: { sequence: SequenceRow[] }) {
   return (
     <div className="flex flex-col items-center animate-fade-in-scale">
       <div className="relative">
-        {/* Glow */}
         <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-3xl scale-90"></div>
         
         <svg 
@@ -453,11 +451,9 @@ function WheelDisplay({ sequence }: { sequence: SequenceRow[] }) {
           viewBox={`0 0 ${size} ${size}`} 
           className="relative drop-shadow-2xl"
         >
-          {/* Outer ring */}
           <circle cx={center} cy={center} r={radius + 20} fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="1" />
           <circle cx={center} cy={center} r={radius + 12} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
           
-          {/* Segments */}
           {SYMBOLS.map((sym, i) => {
             const startAngle = i * sliceAngle - Math.PI / 2;
             const endAngle = (i + 1) * sliceAngle - Math.PI / 2;
@@ -498,7 +494,6 @@ function WheelDisplay({ sequence }: { sequence: SequenceRow[] }) {
             );
           })}
 
-          {/* Center */}
           <circle cx={center} cy={center} r="46" fill="#0A0A0F" stroke="rgba(99,102,241,0.4)" strokeWidth="2" />
           <circle cx={center} cy={center} r="40" fill="url(#centerGrad)" />
           <defs>
