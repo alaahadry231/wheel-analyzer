@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   RotateCcw, Trash2, Sparkles, Activity, Crown,
   Download, Upload, TrendingUp, BarChart3, ArrowRight,
-  Zap, Target, RefreshCw
+  Zap, Target, RefreshCw, Calculator, Coins, AlertCircle
 } from 'lucide-react';
 
 // ==========================================
@@ -20,18 +20,34 @@ export interface SymbolInfo {
   emoji: string;
   color: string;
   type: 'vegetable' | 'animal';
+  multiplier: number;
 }
 
 export const SYMBOLS: SymbolInfo[] = [
-  { id: 'tomato',  name: 'بندورة', emoji: '🍅', color: '#EF4444', type: 'vegetable' },
-  { id: 'pepper',  name: 'فلفل',   emoji: '🌶️', color: '#F97316', type: 'vegetable' },
-  { id: 'corn',    name: 'ذرة',    emoji: '🌽', color: '#EAB308', type: 'vegetable' },
-  { id: 'carrot',  name: 'جزر',    emoji: '🥕', color: '#FB923C', type: 'vegetable' },
-  { id: 'rooster', name: 'ديك',    emoji: '🐓', color: '#DC2626', type: 'animal' },
-  { id: 'sheep',   name: 'خروف',   emoji: '🐑', color: '#A3A3A3', type: 'animal' },
-  { id: 'shrimp',  name: 'جمبري',  emoji: '🦐', color: '#EC4899', type: 'animal' },
-  { id: 'fish',    name: 'سمكة',   emoji: '🐟', color: '#3B82F6', type: 'animal' },
+  { id: 'tomato',  name: 'بندورة', emoji: '🍅', color: '#EF4444', type: 'vegetable', multiplier: 5 },
+  { id: 'pepper',  name: 'فلفل',   emoji: '🌶️', color: '#F97316', type: 'vegetable', multiplier: 5 },
+  { id: 'corn',    name: 'ذرة',    emoji: '🌽', color: '#EAB308', type: 'vegetable', multiplier: 5 },
+  { id: 'carrot',  name: 'جزر',    emoji: '🥕', color: '#FB923C', type: 'vegetable', multiplier: 5 },
+  { id: 'rooster', name: 'ديك',    emoji: '🐓', color: '#DC2626', type: 'animal', multiplier: 45 },
+  { id: 'sheep',   name: 'خروف',   emoji: '🐑', color: '#A3A3A3', type: 'animal', multiplier: 15 },
+  { id: 'shrimp',  name: 'جمبري',  emoji: '🦐', color: '#EC4899', type: 'animal', multiplier: 10 },
+  { id: 'fish',    name: 'سمكة',   emoji: '🐟', color: '#3B82F6', type: 'animal', multiplier: 25 },
 ];
+
+// الاحتمال النظري = (1 / المضاعف) * 100
+const THEORETICAL_WEIGHTS: Record<SymbolId, number> = (() => {
+  const raw: Record<string, number> = {};
+  let sum = 0;
+  SYMBOLS.forEach(s => {
+    raw[s.id] = 1 / s.multiplier;
+    sum += raw[s.id];
+  });
+  const normalized: Record<string, number> = {};
+  SYMBOLS.forEach(s => {
+    normalized[s.id] = (raw[s.id] / sum) * 100;
+  });
+  return normalized as Record<SymbolId, number>;
+})();
 
 interface SequenceRow {
   id: number;
@@ -210,7 +226,7 @@ export default function HomePage() {
                     onClick={() => handleAddSymbol(sym.id)}
                     disabled={submitting}
                     className="group relative surface-subtle p-3 md:p-4 flex flex-col items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
-                    title={sym.name}
+                    title={`${sym.name} (×${sym.multiplier})`}
                   >
                     <div 
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -220,6 +236,7 @@ export default function HomePage() {
                       {sym.emoji}
                     </span>
                     <span className="relative text-[10px] text-slate-400 group-hover:text-white transition-colors font-medium">{sym.name}</span>
+                    <span className="relative text-[9px] text-indigo-400 font-bold">×{sym.multiplier}</span>
                     <div 
                       className="absolute bottom-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                       style={{ backgroundColor: sym.color }}
@@ -248,7 +265,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Last Results — NOW UNDER REGISTER */}
+            {/* Last Results */}
             <div className="surface p-5">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
@@ -323,6 +340,11 @@ export default function HomePage() {
               </div>
             </div>
             <ExpectedSymbols sequence={sequence} />
+          </div>
+
+          {/* EV Calculator - NEW */}
+          <div className="lg:col-span-12 surface p-5">
+            <EVCalculator sequence={sequence} />
           </div>
 
           {/* Transition */}
@@ -733,7 +755,7 @@ function getAverageInterval(intervals: number[]): number | null {
 }
 
 // ==========================================
-// Expected Symbols
+// Expected Symbols (UPDATED with Theoretical Weights)
 // ==========================================
 function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
   if (sequence.length === 0) {
@@ -743,8 +765,10 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
   const total = sequence.length;
   const recent = sequence.slice(-15);
   const recentTotal = recent.length;
+  const dataWeight = Math.min(sequence.length / 50, 1);
 
   const scores = SYMBOLS.map(sym => {
+    const theoreticalPct = THEORETICAL_WEIGHTS[sym.id];
     const totalCount = sequence.filter(s => s.symbol_id === sym.id).length;
     const generalPct = (totalCount / total) * 100;
     const recentCount = recent.filter(s => s.symbol_id === sym.id).length;
@@ -755,36 +779,25 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
       if (sequence[i].symbol_id === sym.id) break;
       currentGap++;
     }
-    const neverAppeared = totalCount === 0;
 
     const intervals = getSymbolIntervals(sequence, sym.id);
     const avgInterval = getAverageInterval(intervals);
-    
     let overdueBonus = 0;
-    let overdueInfo: string | null = null;
 
     if (avgInterval !== null && avgInterval > 0) {
-      const overdueRatio = currentGap / avgInterval;
-      if (overdueRatio > 1.5) {
-        overdueBonus = 15;
-        overdueInfo = `متأخر ${currentGap} عن متوسط ${avgInterval.toFixed(1)}`;
-      } else {
-        overdueInfo = `غائب ${currentGap} من ${avgInterval.toFixed(1)}`;
+      if (currentGap / avgInterval > 1.5) {
+        overdueBonus = 12;
       }
     }
 
-    const gapWeight = Math.min((currentGap / Math.max(total, 1)) * 100 * 2, 30);
+    const gapWeight = Math.min((currentGap / Math.max(total, 1)) * 100 * 2, 25);
 
-    let score;
-    if (neverAppeared) {
-      score = generalPct * 0.5 + 5;
-    } else {
-      score = (generalPct * 0.4) + (recentPct * 0.3) + (gapWeight * 0.3) + overdueBonus;
-    }
+    const dataScore = (generalPct * 0.5) + (recentPct * 0.3) + (gapWeight * 0.2);
+    const blendedScore = (theoreticalPct * (1 - dataWeight)) + (dataScore * dataWeight);
 
     return {
-      ...sym, score, currentGap, avgInterval, overdueInfo,
-      neverAppeared, overdueBonus, generalPct, recentPct, gapWeight,
+      ...sym, score: blendedScore + overdueBonus, currentGap, avgInterval,
+      overdueBonus, generalPct, recentPct, theoreticalPct, gapWeight,
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -809,6 +822,7 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
             <div className={`text-[11px] font-bold mt-0.5 stat-number ${s.overdueBonus > 0 ? 'text-green-400' : 'text-amber-400'}`}>
               {s.score.toFixed(0)}%
             </div>
+            <div className="text-[8px] text-indigo-400 mt-0.5">×{s.multiplier}</div>
             {s.overdueBonus > 0 && (
               <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px]">
                 🔥
@@ -824,17 +838,143 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
             <span className="text-sm w-5">{s.emoji}</span>
             <span className="text-slate-400 w-14 truncate">{s.name}</span>
             <div className="flex-1 flex flex-wrap gap-x-2 gap-y-0.5 text-slate-500">
+              <span>نظري <span className="text-indigo-400 stat-number">{s.theoreticalPct.toFixed(1)}%</span></span>
+              <span>·</span>
               <span>عام <span className="text-slate-300 stat-number">{s.generalPct.toFixed(0)}%</span></span>
               <span>·</span>
-              <span>شرطي <span className="text-slate-300 stat-number">{s.recentPct.toFixed(0)}%</span></span>
-              <span>·</span>
               <span>غياب <span className="text-slate-300 stat-number">{s.currentGap}</span></span>
-              {s.overdueBonus > 0 && (
-                <span className="text-green-400">· 🔥 متأخر</span>
-              )}
+              {s.overdueBonus > 0 && <span className="text-green-400">· 🔥</span>}
             </div>
           </div>
         ))}
+      </div>
+      <p className="text-[9px] text-slate-600 text-center pt-1">
+        {sequence.length < 50 
+          ? `التحليل يعتمد ${Math.round((1 - dataWeight) * 100)}% على المضاعفات و${Math.round(dataWeight * 100)}% على بياناتك (سجّل المزيد لتحسين الدقة)` 
+          : 'التحليل يعتمد على بياناتك الفعلية بشكل أساسي'}
+      </p>
+    </div>
+  );
+}
+
+// ==========================================
+// EV Calculator - NEW
+// ==========================================
+function EVCalculator({ sequence }: { sequence: SequenceRow[] }) {
+  const [betAmount, setBetAmount] = useState<number>(1000);
+  const total = sequence.length;
+
+  if (sequence.length === 0) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <Calculator className="w-3.5 h-3.5 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">حاسبة الرهان (EV)</p>
+            <p className="text-[10px] text-slate-500">Expected Value Calculator</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-600 text-center py-6">سجّل نتائج أولاً لحساب القيمة المتوقعة</p>
+      </div>
+    );
+  }
+
+  const counts: Record<string, number> = {};
+  SYMBOLS.forEach(s => { counts[s.id] = 0; });
+  sequence.forEach(s => { counts[s.symbol_id]++; });
+
+  const results = SYMBOLS.map(sym => {
+    const actualProb = counts[sym.id] / total;
+    const winAmount = betAmount * (sym.multiplier - 1);
+    const ev = (actualProb * winAmount) - ((1 - actualProb) * betAmount);
+    return { ...sym, actualProb, ev, winAmount };
+  }).sort((a, b) => b.ev - a.ev);
+
+  const hasPositiveEV = results.some(r => r.ev > 0);
+
+  return (
+    <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <Calculator className="w-3.5 h-3.5 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">حاسبة الرهان (EV)</p>
+            <p className="text-[10px] text-slate-500">Expected Value Calculator</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Coins className="w-4 h-4 text-amber-400" />
+          <label className="text-[10px] text-slate-400">مبلغ الرهان:</label>
+          <input
+            type="number"
+            value={betAmount}
+            onChange={(e) => setBetAmount(Math.max(1, Number(e.target.value) || 0))}
+            className="w-24 bg-white/[0.05] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white stat-number focus:outline-none focus:border-indigo-500/50"
+            min="1"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {results.map(r => {
+          const isPositive = r.ev > 0;
+          return (
+            <div 
+              key={r.id}
+              className={`p-3 rounded-xl border transition-all hover:scale-[1.02] ${
+                isPositive
+                  ? 'bg-green-500/10 border-green-500/40 shadow-lg shadow-green-500/10'
+                  : 'bg-red-500/5 border-red-500/20'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl">{r.emoji}</span>
+                  <span className="text-[10px] text-slate-300 font-medium">{r.name}</span>
+                </div>
+                <span className="text-[9px] text-indigo-400 font-bold">×{r.multiplier}</span>
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-slate-500">احتمال</span>
+                  <span className="text-slate-300 stat-number">{(r.actualProb * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between text-[9px]">
+                  <span className="text-slate-500">ربح محتمل</span>
+                  <span className="text-slate-300 stat-number">{r.winAmount.toLocaleString()}</span>
+                </div>
+                <div className={`flex justify-between text-[10px] font-bold pt-1 border-t border-white/5 ${
+                  isPositive ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  <span>EV</span>
+                  <span className="stat-number">
+                    {r.ev > 0 ? '+' : ''}{r.ev.toFixed(0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={`mt-3 p-2.5 rounded-lg flex items-start gap-2 text-[10px] ${
+        hasPositiveEV 
+          ? 'bg-green-500/10 border border-green-500/20 text-green-300' 
+          : 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
+      }`}>
+        <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+        <span>
+          {hasPositiveEV 
+            ? 'الرموز الخضراء عندها قيمة متوقعة موجبة (رهان مربح على المدى الطويل).' 
+            : 'لا يوجد رموز بقيمة متوقعة موجبة حالياً. الأفضل تجنب الرهان أو الانتظار لبيانات أكثر.'}
+          {' '}
+          تذكّر: EV إيجابي لا يعني ربح مؤكد، بل متوسط ربح على المدى الطويل.
+        </span>
       </div>
     </div>
   );
