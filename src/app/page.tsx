@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   RotateCcw, Trash2, Sparkles, Activity, Crown,
   Download, Upload, TrendingUp, BarChart3, ArrowRight,
-  Zap, Target, RefreshCw, Calculator, Coins, AlertCircle
+  Zap, Target, RefreshCw, Calculator, Coins, AlertCircle,
+  ShieldCheck, ShieldAlert, Shield
 } from 'lucide-react';
 
 // ==========================================
@@ -152,7 +153,6 @@ export default function HomePage() {
   return (
     <main className="min-h-screen" style={{ fontFamily: 'var(--font-cairo), sans-serif' }}>
       
-      {/* ========== Top Bar ========== */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0A0F]/70 border-b border-white/5">
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export default function HomePage() {
             </div>
             <div>
               <h1 className="text-base font-bold text-white leading-tight">محلل العجلة</h1>
-              <p className="text-[10px] text-slate-500">Wheel Analyzer</p>
+              <p className="text-[10px] text-slate-500">Wheel Analyzer Pro</p>
             </div>
           </div>
 
@@ -176,7 +176,6 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ========== Main Content ========== */}
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 md:py-8">
 
         {error && (
@@ -188,10 +187,8 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ========== Hero Grid ========== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-6">
 
-          {/* Wheel */}
           <div className="lg:col-span-5 surface-elevated p-6 md:p-8 flex flex-col items-center justify-center min-h-[440px]">
             <div className="w-full flex items-center justify-between mb-4">
               <div>
@@ -206,10 +203,8 @@ export default function HomePage() {
             <WheelDisplay sequence={sequence} />
           </div>
 
-          {/* Controls + Last Results */}
           <div className="lg:col-span-7 space-y-5">
 
-            {/* Register */}
             <div className="surface p-5 md:p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -265,7 +260,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Last Results */}
             <div className="surface p-5">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
@@ -279,7 +273,6 @@ export default function HomePage() {
               <LastResults sequence={sequence} />
             </div>
 
-            {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <QuickStat 
                 label="إجمالي النتائج" 
@@ -297,10 +290,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ========== Bento Grid: Analytics ========== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6">
 
-          {/* Frequency */}
           <div className="lg:col-span-4 surface p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
@@ -314,7 +305,6 @@ export default function HomePage() {
             <FrequencyList sequence={sequence} />
           </div>
 
-          {/* Gap */}
           <div className="lg:col-span-4 surface p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
@@ -328,7 +318,6 @@ export default function HomePage() {
             <GapDisplay sequence={sequence} />
           </div>
 
-          {/* Expected */}
           <div className="lg:col-span-4 surface p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -336,18 +325,16 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">الرموز المتوقعة</p>
-                <p className="text-[10px] text-slate-500">Predicted</p>
+                <p className="text-[10px] text-slate-500">Predicted · Level 3</p>
               </div>
             </div>
             <ExpectedSymbols sequence={sequence} />
           </div>
 
-          {/* EV Calculator - NEW */}
           <div className="lg:col-span-12 surface p-5">
             <EVCalculator sequence={sequence} />
           </div>
 
-          {/* Transition */}
           <div className="lg:col-span-12 surface p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
@@ -361,7 +348,6 @@ export default function HomePage() {
             <TransitionAnalyzer sequence={sequence} />
           </div>
 
-          {/* CSV */}
           <div className="lg:col-span-12 surface p-5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -403,11 +389,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="max-w-[1600px] mx-auto px-4 md:px-8 py-6 mt-4">
         <div className="flex items-center justify-between text-[11px] text-slate-600">
-          <span>Wheel Analyzer — محلل العجلة</span>
-          <span>Data-driven predictions</span>
+          <span>Wheel Analyzer Pro — محلل العجلة</span>
+          <span>Level 3 · Markov + Streaks + Confidence</span>
         </div>
       </footer>
     </main>
@@ -733,8 +718,10 @@ function TransitionAnalyzer({ sequence }: { sequence: SequenceRow[] }) {
 }
 
 // ==========================================
-// Advanced Analysis
+// Advanced Analysis: Level 3
 // ==========================================
+
+// Intervals
 function getSymbolIntervals(sequence: SequenceRow[], symbolId: SymbolId): number[] {
   const indexes: number[] = [];
   sequence.forEach((row, idx) => {
@@ -754,8 +741,102 @@ function getAverageInterval(intervals: number[]): number | null {
   return sum / intervals.length;
 }
 
+// ===== Markov Chain (Order 2) =====
+// لما يكون آخر رمزين (A, B)، شو الرمز اللي بيجي بعده؟
+interface MarkovResult {
+  symbol: SymbolId;
+  count: number;
+  total: number;
+  probability: number;
+}
+
+function getMarkovOrder2(sequence: SequenceRow[]): MarkovResult[] {
+  if (sequence.length < 3) return [];
+  
+  const lastTwo = sequence.slice(-2).map(s => s.symbol_id);
+  if (lastTwo.length < 2) return [];
+  
+  const target = `${lastTwo[0]}|${lastTwo[1]}`;
+  const matches: Record<string, number> = {};
+  let total = 0;
+  
+  for (let i = 0; i < sequence.length - 2; i++) {
+    const pattern = `${sequence[i].symbol_id}|${sequence[i + 1].symbol_id}`;
+    if (pattern === target) {
+      const next = sequence[i + 2].symbol_id;
+      matches[next] = (matches[next] || 0) + 1;
+      total++;
+    }
+  }
+  
+  return Object.entries(matches)
+    .map(([symbol, count]) => ({
+      symbol: symbol as SymbolId,
+      count,
+      total,
+      probability: total > 0 ? (count / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.probability - a.probability);
+}
+
+// ===== Streaks Analysis =====
+// شو احتمالية ظهور نفس الرمز مرة تانية بعد ظهوره؟
+interface StreakInfo {
+  symbol: SymbolId;
+  occurrences: number;
+  followedBySame: number;
+  followRate: number;
+}
+
+function getStreakAnalysis(sequence: SequenceRow[]): StreakInfo[] {
+  const stats: Record<string, { occurrences: number; followedBySame: number }> = {};
+  SYMBOLS.forEach(s => { stats[s.id] = { occurrences: 0, followedBySame: 0 }; });
+  
+  for (let i = 0; i < sequence.length - 1; i++) {
+    const current = sequence[i].symbol_id;
+    const next = sequence[i + 1].symbol_id;
+    stats[current].occurrences++;
+    if (current === next) {
+      stats[current].followedBySame++;
+    }
+  }
+  
+  return SYMBOLS.map(s => {
+    const stat = stats[s.id];
+    return {
+      symbol: s.id,
+      occurrences: stat.occurrences,
+      followedBySame: stat.followedBySame,
+      followRate: stat.occurrences > 0 ? (stat.followedBySame / stat.occurrences) * 100 : 0,
+    };
+  });
+}
+
+// ===== Confidence Level =====
+type Confidence = 'high' | 'medium' | 'low';
+
+function getConfidence(sequence: SequenceRow[], patternCount: number): Confidence {
+  if (sequence.length >= 100 && patternCount >= 5) return 'high';
+  if (sequence.length >= 50 || patternCount >= 2) return 'medium';
+  return 'low';
+}
+
+function ConfidenceBadge({ level }: { level: Confidence }) {
+  const config = {
+    high: { icon: ShieldCheck, color: 'text-green-400 bg-green-500/10 border-green-500/30', label: 'ثقة عالية' },
+    medium: { icon: Shield, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30', label: 'ثقة متوسطة' },
+    low: { color: 'text-slate-400 bg-slate-500/10 border-slate-500/30', icon: ShieldAlert, label: 'ثقة منخفضة' },
+  };
+  const { icon: Icon, color, label } = config[level];
+  return (
+    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${color}`} title={label}>
+      <Icon className="w-2.5 h-2.5" />
+    </div>
+  );
+}
+
 // ==========================================
-// Expected Symbols (UPDATED with Theoretical Weights)
+// Expected Symbols — LEVEL 3
 // ==========================================
 function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
   if (sequence.length === 0) {
@@ -766,6 +847,16 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
   const recent = sequence.slice(-15);
   const recentTotal = recent.length;
   const dataWeight = Math.min(sequence.length / 50, 1);
+
+  // Markov
+  const markov = getMarkovOrder2(sequence);
+  const markovMap: Record<string, { prob: number; count: number }> = {};
+  markov.forEach(m => { markovMap[m.symbol] = { prob: m.probability, count: m.count }; });
+
+  // Streaks
+  const streaks = getStreakAnalysis(sequence);
+  const streakMap: Record<string, number> = {};
+  streaks.forEach(s => { streakMap[s.symbol] = s.followRate; });
 
   const scores = SYMBOLS.map(sym => {
     const theoreticalPct = THEORETICAL_WEIGHTS[sym.id];
@@ -783,21 +874,45 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
     const intervals = getSymbolIntervals(sequence, sym.id);
     const avgInterval = getAverageInterval(intervals);
     let overdueBonus = 0;
-
-    if (avgInterval !== null && avgInterval > 0) {
-      if (currentGap / avgInterval > 1.5) {
-        overdueBonus = 12;
-      }
+    if (avgInterval !== null && avgInterval > 0 && currentGap / avgInterval > 1.5) {
+      overdueBonus = 10;
     }
 
-    const gapWeight = Math.min((currentGap / Math.max(total, 1)) * 100 * 2, 25);
+    const gapWeight = Math.min((currentGap / Math.max(total, 1)) * 100 * 2, 20);
 
-    const dataScore = (generalPct * 0.5) + (recentPct * 0.3) + (gapWeight * 0.2);
-    const blendedScore = (theoreticalPct * (1 - dataWeight)) + (dataScore * dataWeight);
+    // Markov factor (0-100)
+    const markovProb = markovMap[sym.id]?.prob ?? 0;
+    const markovPatternCount = markovMap[sym.id]?.count ?? 0;
+
+    // Streak factor
+    const streakRate = streakMap[sym.id] ?? 0;
+
+    // Blend: dataWeight controls how much we trust actual data
+    const dataScore = 
+      (generalPct * 0.4) +
+      (recentPct * 0.3) +
+      (gapWeight * 0.2) +
+      (overdueBonus > 0 ? overdueBonus : 0);
+
+    // Markov + streak add extra signal
+    const advancedBonus = (markovProb * 0.3) + (streakRate * 0.15);
+    const blendedScore = (theoreticalPct * (1 - dataWeight)) + ((dataScore + advancedBonus) * dataWeight);
+
+    const confidence = getConfidence(sequence, markovPatternCount);
 
     return {
-      ...sym, score: blendedScore + overdueBonus, currentGap, avgInterval,
-      overdueBonus, generalPct, recentPct, theoreticalPct, gapWeight,
+      ...sym,
+      score: blendedScore,
+      currentGap,
+      avgInterval,
+      overdueBonus,
+      generalPct,
+      recentPct,
+      theoreticalPct,
+      markovProb,
+      markovPatternCount,
+      streakRate,
+      confidence,
     };
   }).sort((a, b) => b.score - a.score);
 
@@ -817,48 +932,61 @@ function ExpectedSymbols({ sequence }: { sequence: SequenceRow[] }) {
                 : 'surface-subtle border-white/5'
             }`}
           >
+            <div className="flex justify-center mb-0.5">
+              <ConfidenceBadge level={s.confidence as Confidence} />
+            </div>
             <div className="text-xl md:text-2xl">{s.emoji}</div>
             <div className="text-[9px] text-slate-400 mt-0.5">{s.name}</div>
             <div className={`text-[11px] font-bold mt-0.5 stat-number ${s.overdueBonus > 0 ? 'text-green-400' : 'text-amber-400'}`}>
               {s.score.toFixed(0)}%
             </div>
             <div className="text-[8px] text-indigo-400 mt-0.5">×{s.multiplier}</div>
-            {s.overdueBonus > 0 && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px]">
-                🔥
-              </div>
-            )}
           </div>
         ))}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-white/5 space-y-1">
+      <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
         {finalPicks.map(s => (
-          <div key={s.id} className="flex items-center gap-2 text-[10px]">
-            <span className="text-sm w-5">{s.emoji}</span>
-            <span className="text-slate-400 w-14 truncate">{s.name}</span>
-            <div className="flex-1 flex flex-wrap gap-x-2 gap-y-0.5 text-slate-500">
+          <div key={s.id} className="text-[10px]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm w-5">{s.emoji}</span>
+              <span className="text-slate-300 w-14 truncate font-medium">{s.name}</span>
+              <ConfidenceBadge level={s.confidence as Confidence} />
+            </div>
+            <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-slate-500 mt-0.5 pr-7">
               <span>نظري <span className="text-indigo-400 stat-number">{s.theoreticalPct.toFixed(1)}%</span></span>
               <span>·</span>
               <span>عام <span className="text-slate-300 stat-number">{s.generalPct.toFixed(0)}%</span></span>
-              <span>·</span>
-              <span>غياب <span className="text-slate-300 stat-number">{s.currentGap}</span></span>
-              {s.overdueBonus > 0 && <span className="text-green-400">· 🔥</span>}
+              {s.markovProb > 0 && (
+                <>
+                  <span>·</span>
+                  <span>Markov <span className="text-purple-400 stat-number">{s.markovProb.toFixed(0)}%</span></span>
+                </>
+              )}
+              {s.streakRate > 5 && (
+                <>
+                  <span>·</span>
+                  <span>سلسلة <span className="text-cyan-400 stat-number">{s.streakRate.toFixed(0)}%</span></span>
+                </>
+              )}
             </div>
           </div>
         ))}
       </div>
-      <p className="text-[9px] text-slate-600 text-center pt-1">
-        {sequence.length < 50 
-          ? `التحليل يعتمد ${Math.round((1 - dataWeight) * 100)}% على المضاعفات و${Math.round(dataWeight * 100)}% على بياناتك (سجّل المزيد لتحسين الدقة)` 
-          : 'التحليل يعتمد على بياناتك الفعلية بشكل أساسي'}
-      </p>
+
+      {markov.length > 0 && (
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-[9px] text-slate-500 mb-1">
+            🔗 النمط: آخر رمزين → {markov.slice(0, 3).map(m => SYMBOLS.find(s => s.id === m.symbol)?.emoji).join(' ')}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 // ==========================================
-// EV Calculator - NEW
+// EV Calculator — Enhanced
 // ==========================================
 function EVCalculator({ sequence }: { sequence: SequenceRow[] }) {
   const [betAmount, setBetAmount] = useState<number>(1000);
@@ -885,11 +1013,15 @@ function EVCalculator({ sequence }: { sequence: SequenceRow[] }) {
   SYMBOLS.forEach(s => { counts[s.id] = 0; });
   sequence.forEach(s => { counts[s.symbol_id]++; });
 
+  // blend: 60% actual + 40% theoretical
+  const dataWeight = Math.min(sequence.length / 100, 1);
+
   const results = SYMBOLS.map(sym => {
     const actualProb = counts[sym.id] / total;
+    const blendedProb = (actualProb * dataWeight) + ((THEORETICAL_WEIGHTS[sym.id] / 100) * (1 - dataWeight));
     const winAmount = betAmount * (sym.multiplier - 1);
-    const ev = (actualProb * winAmount) - ((1 - actualProb) * betAmount);
-    return { ...sym, actualProb, ev, winAmount };
+    const ev = (blendedProb * winAmount) - ((1 - blendedProb) * betAmount);
+    return { ...sym, actualProb, blendedProb, ev, winAmount };
   }).sort((a, b) => b.ev - a.ev);
 
   const hasPositiveEV = results.some(r => r.ev > 0);
@@ -942,7 +1074,7 @@ function EVCalculator({ sequence }: { sequence: SequenceRow[] }) {
               <div className="space-y-0.5">
                 <div className="flex justify-between text-[9px]">
                   <span className="text-slate-500">احتمال</span>
-                  <span className="text-slate-300 stat-number">{(r.actualProb * 100).toFixed(1)}%</span>
+                  <span className="text-slate-300 stat-number">{(r.blendedProb * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between text-[9px]">
                   <span className="text-slate-500">ربح محتمل</span>
@@ -972,8 +1104,7 @@ function EVCalculator({ sequence }: { sequence: SequenceRow[] }) {
           {hasPositiveEV 
             ? 'الرموز الخضراء عندها قيمة متوقعة موجبة (رهان مربح على المدى الطويل).' 
             : 'لا يوجد رموز بقيمة متوقعة موجبة حالياً. الأفضل تجنب الرهان أو الانتظار لبيانات أكثر.'}
-          {' '}
-          تذكّر: EV إيجابي لا يعني ربح مؤكد، بل متوسط ربح على المدى الطويل.
+          {' '}احتمالات EV مدمجة: {Math.round(dataWeight * 100)}% فعلي + {Math.round((1 - dataWeight) * 100)}% نظري.
         </span>
       </div>
     </div>
